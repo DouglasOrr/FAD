@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -45,13 +46,7 @@ def sync(src_root: Path, extensions: Set[str], dest_root: Path, watch: bool) -> 
             print(f"$ rm {dest}", file=sys.stderr)
             dest.unlink(missing_ok=True)
 
-    # Initial sync
-    for src in src_root.rglob("*"):
-        if src.suffix in extensions:
-            _dosync(src, dest_root / src.relative_to(src_root))
-
-    # Watch for changes
-    if watch:
+    def _dowatch() -> None:
         events = inotify.adapters.InotifyTree(str(src_root)).event_gen(
             yield_nones=False
         )
@@ -61,8 +56,17 @@ def sync(src_root: Path, extensions: Set[str], dest_root: Path, watch: bool) -> 
             if "IN_ISDIR" not in types and src.suffix in extensions:
                 if "IN_CLOSE_WRITE" in types:
                     _dosync(src, dest)
-                if "IN_DELETE" in types:
+                if "IN_DELETE" in types or "IN_MOVED_FROM" in types:
                     _dosync(None, dest)
+
+    # Initial sync
+    for src in src_root.rglob("*"):
+        if src.suffix in extensions:
+            _dosync(src, dest_root / src.relative_to(src_root))
+
+    # Watch for changes
+    if watch:
+        threading.Thread(target=_dowatch, daemon=True).start()
 
 
 def build(dev: bool) -> None:
@@ -81,7 +85,13 @@ def build(dev: bool) -> None:
         ["npx", "tsc", "--outDir", str(out), "--watch" if dev else None],
         background=dev,
     )
-    sync(Path("src"), {".html"}, out, watch=dev)
+    for src_root, extensions, dest_root in [
+        (Path("src"), {".html"}, out),
+        (Path("assets"), {".mp3"}, out / "assets"),
+    ]:
+        sync(src_root, extensions, dest_root, watch=dev)
+    if dev:
+        threading.Event().wait()  # wait forever
 
 
 if __name__ == "__main__":
