@@ -6,7 +6,6 @@
     "license": "MIT",
     "private": "true",
     "scripts": {
-        "build": "tsc --outDir dist/ && cp src/index.html dist/",
         "test": "jest",
         "lint": "eslint src/ --ext .ts,.tsx",
         "check": "npx tsc --noEmit && npm run test && npm run lint"

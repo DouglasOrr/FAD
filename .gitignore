@@ -1,4 +1,5 @@
 dist/
+dist_dev/
 local/
 node_modules/
 

@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+"""App build & continuous rebuild."""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from typing import List, Optional, Set
+
+import inotify.adapters
+
+
+def run(
+    command: List[str],
+    background: bool = False,
+    cwd: Optional[Path] = None,
+    log: Optional[Path] = None,
+) -> None:
+    command = [arg for arg in command if arg is not None]
+    print(f"$ {' '.join(command)}", file=sys.stderr)
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        stdout=log.open("wb", buffering=0) if log else None,
+        stderr=subprocess.STDOUT if log else None,
+        env=env,
+    )
+    if not background:
+        if rc := process.wait():
+            sys.exit(rc)
+
+
+def sync(src_root: Path, extensions: Set[str], dest_root: Path, watch: bool) -> None:
+    def _dosync(src: Optional[Path], dest: Path) -> None:
+        if src:
+            print(f"$ cp {src} {dest}", file=sys.stderr)
+            dest.parent.mkdir(exist_ok=True)
+            shutil.copy(src, dest)
+        else:
+            print(f"$ rm {dest}", file=sys.stderr)
+            dest.unlink(missing_ok=True)
+
+    # Initial sync
+    for src in src_root.rglob("*"):
+        if src.suffix in extensions:
+            _dosync(src, dest_root / src.relative_to(src_root))
+
+    # Watch for changes
+    if watch:
+        events = inotify.adapters.InotifyTree(str(src_root)).event_gen(
+            yield_nones=False
+        )
+        for _, types, parent, name in events:
+            src = Path(parent) / name
+            dest = dest_root / src.relative_to(src_root)
+            if "IN_ISDIR" not in types and src.suffix in extensions:
+                if "IN_CLOSE_WRITE" in types:
+                    _dosync(src, dest)
+                if "IN_DELETE" in types:
+                    _dosync(None, dest)
+
+
+def build(dev: bool) -> None:
+    out = Path("dist_dev" if dev else "dist")
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+    if dev:
+        run(
+            ["python3", "-m", "http.server"],
+            background=True,
+            cwd=out,
+            log=out / "server.log",
+        )
+    run(
+        ["npx", "tsc", "--outDir", str(out), "--watch" if dev else None],
+        background=dev,
+    )
+    sync(Path("src"), {".html"}, out, watch=dev)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="run in dev mode (continuous rebuilding & serving)",
+    )
+    build(**vars(parser.parse_args()))
