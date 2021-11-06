@@ -86,7 +86,7 @@ def build(dev: bool) -> None:
         background=dev,
     )
     for src_root, extensions, dest_root in [
-        (Path("src"), {".html"}, out),
+        (Path("src"), {".html", ".css"}, out),
         (Path("assets"), {".mp3"}, out / "assets"),
     ]:
         sync(src_root, extensions, dest_root, watch=dev)
