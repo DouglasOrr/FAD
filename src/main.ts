@@ -24,9 +24,8 @@ class Player {
         const source = this.context.createBufferSource();
         source.buffer = this.ping0;
         const panNode = this.context.createStereoPanner();
-        source.connect(panNode);
         panNode.pan.value = pan;
-        panNode.connect(this.context.destination);
+        source.connect(panNode).connect(this.context.destination);
         source.start();
     }
 };
@@ -64,7 +63,7 @@ window.onload = () => {
 
     document.onkeydown = (e: KeyboardEvent) => {
         if (e.key === " ") {
-            player.play(-((document.getElementById("pan") as HTMLInputElement).value));
+            player.play(+((document.getElementById("pan") as HTMLInputElement).value));
         }
     };
 
