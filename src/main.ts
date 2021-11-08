@@ -1,7 +1,3 @@
-export function name() {
-    return "ping";
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // Audio
 
@@ -11,13 +7,11 @@ class Player {
 
     constructor(context: AudioContext) {
         this.context = context;
-        const player = this;
-        async function fetchPing() {
-            let response = await fetch("assets/ping0.mp3");
-            let buffer = await response.arrayBuffer();
-            player.ping0 = await context.decodeAudioData(buffer);
-        };
-        fetchPing()
+        (async () => {
+            const response = await fetch("assets/ping0.mp3");
+            const buffer = await response.arrayBuffer();
+            this.ping0 = await context.decodeAudioData(buffer);
+        })();
     }
 
     play(pan: number): void {
@@ -28,7 +22,7 @@ class Player {
         source.connect(panNode).connect(this.context.destination);
         source.start();
     }
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Drawing

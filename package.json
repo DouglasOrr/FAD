@@ -8,7 +8,7 @@
     "scripts": {
         "test": "jest",
         "lint": "eslint src/ --ext .ts,.tsx",
-        "check": "npx tsc --noEmit && npm run test && npm run lint"
+        "check": "npx tsc --noEmit && pytest tools/ && npm run test && npm run lint"
     },
     "jest": {
         "preset": "ts-jest"
