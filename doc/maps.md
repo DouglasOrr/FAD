@@ -41,3 +41,7 @@ Before they are used by the game, the maps are preprocessed into this json forma
     "cells": [1, 1, 1, 1, 0, 0, 0, 0, 2, 2, ...],
 }
 ```
+
+This is reasonably self-explanatory, but note:
+
+ - `cell == 0` means playable area, `1` is terrain, `2` is finish zone.

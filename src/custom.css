@@ -4,3 +4,8 @@ html, body {
     margin: 0;
     padding: 0;
 }
+#screen {
+    position: absolute;
+    left: 32px;
+    top: 32px;
+}

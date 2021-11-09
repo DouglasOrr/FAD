@@ -1,3 +1,5 @@
+import * as viz from "./viz.js";
+
 ///////////////////////////////////////////////////////////////////////////////
 // Audio
 
@@ -25,23 +27,6 @@ class Player {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Drawing
-
-type DrawFn = (context: CanvasRenderingContext2D) => void;
-
-function setupCanvas(canvas: HTMLCanvasElement, draw: DrawFn) {
-    const context = canvas.getContext("2d");
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-    draw(context);
-    window.addEventListener("resize", () => {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-        draw(context);
-    });
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Startup
 
 window.onload = () => {
@@ -61,10 +46,19 @@ window.onload = () => {
         }
     };
 
-    setupCanvas(document.getElementById("screen") as HTMLCanvasElement,
-        (context: CanvasRenderingContext2D) => {
-            context.fillStyle = "#000000";
-            context.fillRect(0, 0, context.canvas.clientWidth, context.canvas.clientHeight);
-        }
-    );
+    fetch("assets/dev0.map.json").then(r => r.json()).then(function (json) {
+        const map = json as viz.GameMap;
+        const renderer = new viz.Renderer(
+            document.getElementById("screen") as HTMLCanvasElement, map, 5);
+        const ship = {
+            position: map.start.slice() as viz.Vector,
+            bearing: map.start_bearing,
+        };
+        window.setInterval(function () {
+            ship.position[1] += 0.1;
+            // console.log(ship.position);
+            renderer.draw(ship);
+        }, 100);
+        renderer.draw(ship);
+    });
 };
