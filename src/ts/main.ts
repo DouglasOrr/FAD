@@ -38,13 +38,13 @@ window.onload = () => {
         document.head.appendChild(script);
     }
 
+    // Dev example
     const player = new Player(new window.AudioContext());
-
-    document.onkeydown = (e: KeyboardEvent) => {
+    addEventListener("keydown", (e: KeyboardEvent) => {
         if (e.key === " ") {
             player.play(+((document.getElementById("pan") as HTMLInputElement).value));
         }
-    };
+    });
 
     fetch("assets/dev0.map.json").then(r => r.json()).then(function (json) {
         const map = json as viz.GameMap;

@@ -47,13 +47,16 @@ export class Renderer {
     }
 
     draw(ship: Ship): void {
-        this.ctx.resetTransform();
+        // Background
         this.ctx.putImageData(this.background, 0, 0);
+
+        // Transform
+        this.ctx.resetTransform();
         this.ctx.scale(this.scale, this.scale);
         this.ctx.translate(.5, .5);
 
         // Breadcrumbs
-        this.ctx.strokeStyle = "#0000ff";
+        this.ctx.strokeStyle = "#ff0000";
         this.ctx.lineWidth = .5 / this.scale;
         this.ctx.beginPath();
         this.ctx.moveTo(this.map.start[0], this.map.start[1]);
