@@ -1,3 +1,8 @@
+/**
+ * Top-level wiring.
+ */
+
+import * as core from "./core.js";
 import * as viz from "./viz.js";
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,6 +32,23 @@ class Player {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Input
+
+class Keyboard {
+    private pressed: Set<string> = new Set<string>();
+
+    keyDown(e: KeyboardEvent): void {
+        this.pressed.add(e.key);
+    }
+    keyUp(e: KeyboardEvent): void {
+        this.pressed.delete(e.key);
+    }
+    isPressed(key: string): boolean {
+        return this.pressed.has(key);
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Startup
 
 window.onload = () => {
@@ -50,13 +72,16 @@ window.onload = () => {
         const map = json as viz.GameMap;
         const renderer = new viz.Renderer(
             document.getElementById("screen") as HTMLCanvasElement, map, 5);
-        const ship = {
-            position: map.start.slice() as viz.Vector,
-            bearing: map.start_bearing,
-        };
+        const keyboard = new Keyboard();
+        addEventListener("keydown", e => keyboard.keyDown(e));
+        addEventListener("keyup", e => keyboard.keyUp(e));
+        const ship = new core.Ship([map.start[0], map.start[1]], [0, 0], map.start_bearing);
         window.setInterval(function () {
-            ship.position[1] += 0.1;
-            // console.log(ship.position);
+            // ship.position[1] += 0.1;
+            ship.tick(
+                +keyboard.isPressed("w") - +keyboard.isPressed("s"),
+                +keyboard.isPressed("d") - +keyboard.isPressed("a")
+            );
             renderer.draw(ship);
         }, 100);
         renderer.draw(ship);

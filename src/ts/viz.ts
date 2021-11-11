@@ -1,21 +1,16 @@
 /**
- * Module for debug rendering of the map.
+ * Debug rendering of the map.
  */
 
-export type Vector = [number, number];
+import * as core from "./core.js";
 
 export interface GameMap {
     width: number;
     height: number;
-    start: Vector;
+    start: core.Vector;
     start_bearing: number;
-    breadcrumbs: Array<Vector>;
+    breadcrumbs: Array<core.Vector>;
     cells: Array<number>;
-}
-
-export interface Ship {
-    position: Vector;
-    bearing: number;
 }
 
 export class Renderer {
@@ -46,7 +41,7 @@ export class Renderer {
         }
     }
 
-    draw(ship: Ship): void {
+    draw(ship: core.Ship): void {
         // Background
         this.ctx.putImageData(this.background, 0, 0);
 
@@ -66,7 +61,7 @@ export class Renderer {
         this.ctx.stroke();
 
         // Ship
-        const shipRadius = 1.5;
+        const shipRadius = 2;
         this.ctx.beginPath();
         this.ctx.arc(ship.position[0], ship.position[1], shipRadius, 0, 2 * Math.PI);
         this.ctx.fillStyle = "#ff0000";
