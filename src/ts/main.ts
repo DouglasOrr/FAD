@@ -46,7 +46,7 @@ class Keyboard {
     isPressed(key: string): boolean {
         return this.pressed.has(key);
     }
-};
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Startup
@@ -68,22 +68,22 @@ window.onload = () => {
         }
     });
 
+    const keyboard = new Keyboard();
+    addEventListener("keydown", e => keyboard.keyDown(e));
+    addEventListener("keyup", e => keyboard.keyUp(e));
+
     fetch("assets/dev0.map.json").then(r => r.json()).then(function (json) {
-        const map = json as viz.GameMap;
+        const map = json as core.GameMap;
         const renderer = new viz.Renderer(
             document.getElementById("screen") as HTMLCanvasElement, map, 5);
-        const keyboard = new Keyboard();
-        addEventListener("keydown", e => keyboard.keyDown(e));
-        addEventListener("keyup", e => keyboard.keyUp(e));
-        const ship = new core.Ship([map.start[0], map.start[1]], [0, 0], map.start_bearing);
+        const ship = core.Ship.create(map);
         window.setInterval(function () {
-            // ship.position[1] += 0.1;
-            ship.tick(
-                +keyboard.isPressed("w") - +keyboard.isPressed("s"),
-                +keyboard.isPressed("d") - +keyboard.isPressed("a")
-            );
+            const up = (keyboard.isPressed("w") || keyboard.isPressed("ArrowUp"));
+            const down = (keyboard.isPressed("s") || keyboard.isPressed("ArrowDown"));
+            const left = (keyboard.isPressed("a") || keyboard.isPressed("ArrowLeft"));
+            const right = (keyboard.isPressed("d") || keyboard.isPressed("ArrowRight"));
+            ship.tick(+up - +down, +right - +left);
             renderer.draw(ship);
-        }, 100);
-        renderer.draw(ship);
+        }, 1000 * core.TickTime);
     });
 };

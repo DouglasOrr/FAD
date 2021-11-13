@@ -17,7 +17,7 @@ Guidelines:
 
  - The playable area should be reasonably convex, with no tricky small-scale roughness to get stuck in.
  - Edges of the map should be covered with terrain.
- - There must be a 5 pixel wide route between start and finish zone.
+ - There must be a 1 pixel wide route between start and finish zone.
  - The straight line between breadcrumbs should be well within the playable area, as this is the route the NPC leader will follow.
  - Breadcrumbs should extend into the finish zone.
  - Breadcrumbs describe a route using this simple greedy chaining rule:

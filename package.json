@@ -11,7 +11,10 @@
         "check": "npx tsc --noEmit && pytest tools/ && npm run test && npm run lint"
     },
     "jest": {
-        "preset": "ts-jest"
+        "preset": "ts-jest",
+        "roots": [
+            "src"
+        ]
     },
     "devDependencies": {
         "@types/jest": "^27.0.2",

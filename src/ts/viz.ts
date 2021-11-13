@@ -4,23 +4,15 @@
 
 import * as core from "./core.js";
 
-export interface GameMap {
-    width: number;
-    height: number;
-    start: core.Vector;
-    start_bearing: number;
-    breadcrumbs: Array<core.Vector>;
-    cells: Array<number>;
-}
-
 export class Renderer {
     readonly ctx: CanvasRenderingContext2D
     readonly background: ImageData
 
-    constructor(canvas: HTMLCanvasElement, readonly map: GameMap, readonly scale: number) {
+    constructor(canvas: HTMLCanvasElement, readonly map: core.GameMap, readonly scale: number) {
         canvas.width = scale * map.width;
         canvas.height = scale * map.height;
         this.ctx = canvas.getContext("2d");
+        // Pre-render the background image
         this.background = this.ctx.createImageData(scale * map.width, scale * map.height);
         const data = this.background.data;
         const cellTypeToGrayscale = [255, 0, 192];
@@ -61,15 +53,14 @@ export class Renderer {
         this.ctx.stroke();
 
         // Ship
-        const shipRadius = 2;
         this.ctx.beginPath();
-        this.ctx.arc(ship.position[0], ship.position[1], shipRadius, 0, 2 * Math.PI);
+        this.ctx.arc(ship.position[0], ship.position[1], core.ShipRadius, 0, 2 * Math.PI);
         this.ctx.fillStyle = "#ff0000";
         this.ctx.fill();
         const shipFrontAngle = 0.25 * Math.PI;
         this.ctx.beginPath();
         this.ctx.moveTo(ship.position[0], ship.position[1]);
-        this.ctx.arc(ship.position[0], ship.position[1], shipRadius + 0.25,
+        this.ctx.arc(ship.position[0], ship.position[1], core.ShipRadius + 0.25,
             Math.PI / 2 - shipFrontAngle + ship.bearing,
             Math.PI / 2 + shipFrontAngle + ship.bearing);
         this.ctx.fillStyle = "#0000ff";
