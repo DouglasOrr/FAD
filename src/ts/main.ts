@@ -4,52 +4,14 @@
 
 import * as core from "./core.js";
 import * as viz from "./viz.js";
+import * as sound from "./sound.js";
+import * as input from "./input.js";
 
-///////////////////////////////////////////////////////////////////////////////
-// Audio
-
-class Player {
-    context: AudioContext;
-    ping0: AudioBuffer;
-
-    constructor(context: AudioContext) {
-        this.context = context;
-        (async () => {
-            const response = await fetch("assets/ping0.mp3");
-            const buffer = await response.arrayBuffer();
-            this.ping0 = await context.decodeAudioData(buffer);
-        })();
-    }
-
-    play(pan: number): void {
-        const source = this.context.createBufferSource();
-        source.buffer = this.ping0;
-        const panNode = this.context.createStereoPanner();
-        panNode.pan.value = pan;
-        source.connect(panNode).connect(this.context.destination);
-        source.start();
-    }
+async function loadMap(name: string): Promise<core.GameMap> {
+    return fetch(`assets/${name}.map.json`)
+        .then(r => r.json())
+        .then(j => j as core.GameMap);
 }
-
-///////////////////////////////////////////////////////////////////////////////
-// Input
-
-class Keyboard {
-    private pressed: Set<string> = new Set<string>();
-
-    keyDown(e: KeyboardEvent): void {
-        this.pressed.add(e.key);
-    }
-    keyUp(e: KeyboardEvent): void {
-        this.pressed.delete(e.key);
-    }
-    isPressed(key: string): boolean {
-        return this.pressed.has(key);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Startup
 
 window.onload = () => {
     const params = new URLSearchParams(window.location.search);
@@ -60,30 +22,41 @@ window.onload = () => {
         document.head.appendChild(script);
     }
 
-    // Dev example
-    const player = new Player(new window.AudioContext());
-    addEventListener("keydown", (e: KeyboardEvent) => {
-        if (e.key === " ") {
-            player.play(+((document.getElementById("pan") as HTMLInputElement).value));
-        }
-    });
-
-    const keyboard = new Keyboard();
-    addEventListener("keydown", e => keyboard.keyDown(e));
-    addEventListener("keyup", e => keyboard.keyUp(e));
-
-    fetch("assets/dev0.map.json").then(r => r.json()).then(function (json) {
-        const map = json as core.GameMap;
+    loadMap("dev0").then(map => {
+        const player = new sound.Player(new window.AudioContext());
+        const keyboard = new input.Keyboard(new Map<string, string[]>(Object.entries({
+            up: ["w", "ArrowUp"],
+            down: ["s", "ArrowDown"],
+            left: ["a", "ArrowLeft"],
+            right: ["d", "ArrowRight"],
+            playCollision: ["1"],
+            playPing: ["2", " "],
+            playFinished: ["3"],
+            playDemo: ["9"],
+        })));
+        keyboard.listen("playCollision", () => { player.collision(); });
+        keyboard.listen("playPing", () => { player.ping(); });
+        keyboard.listen("playFinished", () => { player.finished(); });
+        keyboard.listen("playDemo", () => {
+            player.pingDemo(+((document.getElementById("pan") as HTMLInputElement).value));
+        });
         const renderer = new viz.Renderer(
             document.getElementById("screen") as HTMLCanvasElement, map, 5);
         const ship = core.Ship.create(map);
         window.setInterval(function () {
-            const up = (keyboard.isPressed("w") || keyboard.isPressed("ArrowUp"));
-            const down = (keyboard.isPressed("s") || keyboard.isPressed("ArrowDown"));
-            const left = (keyboard.isPressed("a") || keyboard.isPressed("ArrowLeft"));
-            const right = (keyboard.isPressed("d") || keyboard.isPressed("ArrowRight"));
-            ship.tick(+up - +down, +right - +left);
+            ship.tick(
+                +keyboard.has("up") - +keyboard.has("down"),
+                +keyboard.has("right") - +keyboard.has("left"),
+            );
             renderer.draw(ship);
         }, 1000 * core.TickTime);
+        ship.collisions.listen(e => {
+            const [ship, hit] = e;
+            console.log(ship.position, hit);
+            player.collision();
+        })
+        ship.finished.listen(() => {
+            player.finished();
+        })
     });
 };

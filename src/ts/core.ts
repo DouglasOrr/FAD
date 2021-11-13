@@ -2,6 +2,8 @@
  * Basic game logic: physics.
  */
 
+import * as utility from "./utility.js";
+
 export type Vector = [number, number];
 
 export function vectorLength(x: Vector): number {
@@ -67,6 +69,10 @@ const ReboundRestitution = 0.7;
 const Drag = 0.2;
 
 export class Ship {
+    readonly collisions = new utility.Event<[Ship, HitTest]>();
+    readonly finished = new utility.Event<Ship>();
+    private isFinished = false;
+
     constructor(
         public position: Vector,
         public velocity: Vector,
@@ -78,7 +84,7 @@ export class Ship {
         return new Ship([map.start[0], map.start[1]], [0, 0], map.start_bearing, map);
     }
 
-    bounce(normal: Vector): void {
+    private bounce(normal: Vector): void {
         const scale = ReboundAcceleration * TickTime +
             (1 + ReboundRestitution) * Math.max(0, -vectorDot(this.velocity, normal));
         this.velocity[0] += normal[0] * scale;
@@ -95,7 +101,11 @@ export class Ship {
         const hit = HitTest.test(this.map.cells, this.map.width, this.map.height, this.position);
         if (hit.collision) {
             this.bounce(hit.normal);
-            console.log(this.position, hit);
+            this.collisions.send([this, hit]);
+        }
+        if (hit.finish && !this.isFinished) {
+            this.isFinished = true;
+            this.finished.send(this);
         }
 
         // Update position
