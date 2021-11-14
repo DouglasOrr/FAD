@@ -2,6 +2,12 @@
  * Audio processing.
  */
 
+import * as core from "./core.js";
+
+function dbToGain(db: number): number {
+    return Math.pow(10, db / 20);
+}
+
 export class Player {
     private ping0: AudioBuffer;
 
@@ -34,16 +40,23 @@ export class Player {
             .connect(this.context.destination);
     }
 
-    ping(): void {
+    ping(pongs: core.Pong[]): void {
+        const duration = 0.1;
         const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 1000 });
+        const decay = new GainNode(this.context);
+        decay.gain.value = 0;
+        decay.gain.linearRampToValueAtTime(0.5, this.context.currentTime + duration / 10);
+        decay.gain.linearRampToValueAtTime(0, this.context.currentTime + duration);
+        oscillator.connect(decay).connect(this.context.destination);
 
-        const decay = oscillator.connect(this.decay(1.0, 0.1));
-        decay.connect(this.context.destination);
-        this.addEcho(decay, 0.2, 0.5);
-        this.addEcho(decay, 0.4, 0.1);
-
+        for (const pong of pongs) {
+            const gain = dbToGain(-pong.attenuation) / pongs.length;
+            if (0.01 < gain) {
+                this.addEcho(decay, pong.delay, gain);
+            }
+        }
         oscillator.start();
-        oscillator.stop(this.context.currentTime + 0.1);
+        oscillator.stop(this.context.currentTime + duration);
     }
 
     collision(): void {

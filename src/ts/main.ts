@@ -44,7 +44,7 @@ window.onload = () => {
             playDemo: ["9"],
         })));
         keyboard.listen("playCollision", () => { player.collision(); });
-        keyboard.listen("playPing", () => { player.ping(); });
+        keyboard.listen("playPing", () => { player.ping([]); });
         keyboard.listen("playFinished", () => { player.finished(); });
         keyboard.listen("playDemo", () => {
             player.pingDemo(+((document.getElementById("pan") as HTMLInputElement).value));
@@ -57,8 +57,6 @@ window.onload = () => {
             );
         });
         ship.collisions.listen(e => {
-            const [ship, hit] = e;
-            console.log(ship.position, hit);
             player.collision();
         });
         ship.finished.listen(() => {
@@ -67,10 +65,16 @@ window.onload = () => {
         keyboard.listen("ping", () => {
             ship.ping();
         });
+        ship.pongs.listen((e) => {
+            player.ping(e);
+        });
 
         // Debug only
         const renderer = new viz.Renderer(
-            document.getElementById("screen") as HTMLCanvasElement, map, 5);
-        ticker.listen(() => renderer.draw(ship));
+            map, ship, document.getElementById("screen") as HTMLCanvasElement,
+            { scale: 5 },
+        );
+        ticker.listen(() => renderer.draw());
+        ship.pongs.listen((e) => { renderer.addPongs(e); });
     });
 };

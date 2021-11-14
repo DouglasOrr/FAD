@@ -33,3 +33,9 @@ export function vectorLength(x: Vector): number {
 export function vectorDot(a: Vector, b: Vector): number {
     return a[0] * b[0] + a[1] * b[1];
 }
+
+export function vectorDistance(a: Vector, b: Vector): number {
+    const dx = a[0] - b[0];
+    const dy = a[1] - b[1];
+    return Math.sqrt(dx * dx + dy * dy);
+}

@@ -4,10 +4,30 @@
 
 import * as utility from "./utility.js";
 
+// Physics
+export const TickTime = 0.01;  // s
+export const ShipRadius = 2;  // px
+const RotationRate = 2.5;  // rad/s
+const Acceleration = 15;  // px/s/s
+const ReboundAcceleration = 5;  // px/s/s
+const ReboundRestitution = 0.7;
+const Drag = 0.2;  // 1/px
+
+// Pings
+const PingCount = 32;
+const SpeedOfSound = 40;  // px/s
+const Attenuation = 0.4;  // dB/px
+
 export interface Grid {
     width: number;
     height: number;
     cells: Array<number>;
+}
+
+const enum Cell {
+    Empty = 0,
+    Terrain = 1,
+    Finish = 2,
 }
 
 export interface GameMap extends Grid {
@@ -27,16 +47,16 @@ export class HitTest {
         const ox = Math.floor(position[0]);
         const oy = Math.floor(position[1]);
         const cell = grid.cells[grid.width * oy + ox];
-        let collision = (cell === 1);
+        let collision = (cell === Cell.Terrain);
         let normal: utility.Vector = null;
         if (collision) {
             // Note: dx = (terrain_right - terrain_left)
             const dx =
-                +(grid.width <= ox + 1 ? true : (grid.cells[grid.width * oy + ox + 1] === 1))
-                - +(ox - 1 < 0 ? true : (grid.cells[grid.width * oy + ox - 1] === 1));
+                +(grid.width <= ox + 1 ? true : (grid.cells[grid.width * oy + ox + 1] === Cell.Terrain))
+                - +(ox - 1 < 0 ? true : (grid.cells[grid.width * oy + ox - 1] === Cell.Terrain));
             const dy =
-                +(grid.height <= oy + 1 ? true : (grid.cells[grid.width * (oy + 1) + ox] === 1))
-                - +(oy - 1 < 0 ? true : (grid.cells[grid.width * (oy - 1) + ox] === 1));
+                +(grid.height <= oy + 1 ? true : (grid.cells[grid.width * (oy + 1) + ox] === Cell.Terrain))
+                - +(oy - 1 < 0 ? true : (grid.cells[grid.width * (oy - 1) + ox] === Cell.Terrain));
 
             if (dx === 0 && dy === 0) {
                 // This is unlikely - an "embedded" collision - just give up so we don't get stuck
@@ -48,22 +68,23 @@ export class HitTest {
                 normal[1] /= length;
             }
         }
-        const finish = (cell === 2);
-        return new HitTest(collision, finish, normal);
+        return new HitTest(collision, cell === Cell.Finish, normal);
     }
 }
 
-export const TickTime = 0.01;
-export const ShipRadius = 2;
-const RotationRate = 2.5;
-const Acceleration = 15;
-const ReboundAcceleration = 5;
-const ReboundRestitution = 0.7;
-const Drag = 0.2;
+export class Pong {
+    constructor(
+        readonly relativeBearing: number,
+        public delay: number,
+        public attenuation: number,
+        public hit: utility.Vector,
+    ) { }
+}
 
 export class Ship {
-    readonly collisions = new utility.Event<[Ship, HitTest]>();
-    readonly finished = new utility.Event<Ship>();
+    readonly collisions = new utility.Event<HitTest>();
+    readonly finished = new utility.Event<void>();
+    readonly pongs = new utility.Event<Pong[]>();
     private isFinished = false;
 
     constructor(
@@ -74,7 +95,7 @@ export class Ship {
     ) { }
 
     static create(map: GameMap): Ship {
-        return new Ship([map.start[0], map.start[1]], [0, 0], map.start_bearing, map);
+        return new Ship([map.start[0] + 0.5, map.start[1] + 0.5], [0, 0], map.start_bearing, map);
     }
 
     private bounce(normal: utility.Vector): void {
@@ -84,12 +105,69 @@ export class Ship {
         this.velocity[1] += normal[1] * scale;
     }
 
+    private traceRay(relativeBearing: number): Pong {
+        let major: number, minor: number;
+        let majorLimit: number, minorLimit: number;
+        let majorStride: number, minorStride: number;
+        let majorStep: number, minorStep: number;
+        // Transform everything into [major, minor] coordinates
+        const ox = Math.floor(this.position[0]);
+        const oy = Math.floor(this.position[1]);
+        const cosBearing = Math.cos(this.bearing + relativeBearing);
+        const sinBearing = -Math.sin(this.bearing + relativeBearing);
+        const yMajor = Math.abs(cosBearing) > Math.abs(sinBearing);
+        if (yMajor) {  // Y axis is major
+            major = oy;
+            minor = ox;
+            majorLimit = this.map.height - 1;
+            minorLimit = this.map.width - 1;
+            majorStride = this.map.width;
+            minorStride = 1;
+            majorStep = Math.sign(cosBearing);
+            minorStep = sinBearing / Math.abs(cosBearing);
+        } else {  // X axis is major
+            major = ox;
+            minor = oy;
+            majorLimit = this.map.width - 1;
+            minorLimit = this.map.height - 1;
+            majorStride = 1;
+            minorStride = this.map.width;
+            majorStep = Math.sign(sinBearing);
+            minorStep = cosBearing / Math.abs(sinBearing);
+        }
+        // Line rasterisation loop
+        let attenuation = 0, delay = 0;
+        const stepLength = Math.abs(majorStep) + Math.abs(minorStep);
+        for (; ;) {
+            // 'major' is always quantised, 'minor' requires quantisation
+            const iMinor = Math.floor(minor);
+            if (major < 0 || majorLimit < major || iMinor < 0 || minorLimit < iMinor) {
+                major = Math.max(0, Math.min(major, majorLimit));
+                minor = Math.max(0, Math.min(iMinor, minorLimit));
+                break;
+            }
+            if (this.map.cells[majorStride * major + minorStride * iMinor] === Cell.Terrain) {
+                minor = iMinor;
+                break;
+            }
+            attenuation += 2 * stepLength * Attenuation;
+            delay += 2 * stepLength / SpeedOfSound;
+            major += majorStep;
+            minor += minorStep;
+        }
+        return new Pong(relativeBearing, delay, attenuation, yMajor ? [minor, major] : [major, minor]);
+    }
+
     ping(): void {
-        console.log(`ping ${this.position} ${this.bearing}`);
+        const pongs = [];
+        for (let i = 0; i < PingCount; ++i) {
+            pongs.push(this.traceRay(2 * Math.PI * i / PingCount));
+        }
+        this.pongs.send(pongs);
     }
 
     tick(thrust: number, rotate: number): void {
-        // Update bearinig
+        // Update bearing
         this.bearing = (this.bearing + rotate * RotationRate * TickTime);
         if (this.bearing < -Math.PI) { this.bearing += 2 * Math.PI; }
         if (Math.PI < this.bearing) { this.bearing -= 2 * Math.PI; }
@@ -98,11 +176,11 @@ export class Ship {
         const hit = HitTest.test(this.map, this.position);
         if (hit.collision) {
             this.bounce(hit.normal);
-            this.collisions.send([this, hit]);
+            this.collisions.send(hit);
         }
         if (hit.finish && !this.isFinished) {
             this.isFinished = true;
-            this.finished.send(this);
+            this.finished.send();
         }
 
         // Update position

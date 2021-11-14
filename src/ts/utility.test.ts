@@ -24,6 +24,7 @@ expect.extend({
 test("vectors", () => {
     expect(utility.vectorLength([3, 4])).toBeCloseTo(5);
     expect(utility.vectorDot([1, -1], [2, -3])).toBeCloseTo(5);
+    expect(utility.vectorDistance([10, 20], [50, -10])).toBeCloseTo(50);
 });
 
 test("vector expect", () => {
