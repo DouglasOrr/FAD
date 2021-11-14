@@ -2,6 +2,9 @@
  * General utilities.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Event
+
 export type EventListener<T> = (data: T) => void;
 
 export class Event<T> {
@@ -16,4 +19,17 @@ export class Event<T> {
             listener(data);
         }
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Vector
+
+export type Vector = [number, number];
+
+export function vectorLength(x: Vector): number {
+    return Math.sqrt(x[0] * x[0] + x[1] * x[1]);
+}
+
+export function vectorDot(a: Vector, b: Vector): number {
+    return a[0] * b[0] + a[1] * b[1];
 }

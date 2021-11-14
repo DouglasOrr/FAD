@@ -37,8 +37,9 @@ window.onload = () => {
             down: ["s", "ArrowDown"],
             left: ["a", "ArrowLeft"],
             right: ["d", "ArrowRight"],
+            ping: [" "],
             playCollision: ["1"],
-            playPing: ["2", " "],
+            playPing: ["2"],
             playFinished: ["3"],
             playDemo: ["9"],
         })));
@@ -62,6 +63,9 @@ window.onload = () => {
         });
         ship.finished.listen(() => {
             player.finished();
+        });
+        keyboard.listen("ping", () => {
+            ship.ping();
         });
 
         // Debug only
