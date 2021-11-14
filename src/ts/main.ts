@@ -6,11 +6,18 @@ import * as core from "./core.js";
 import * as viz from "./viz.js";
 import * as sound from "./sound.js";
 import * as input from "./input.js";
+import * as utility from "./utility.js";
 
 async function loadMap(name: string): Promise<core.GameMap> {
     return fetch(`assets/${name}.map.json`)
         .then(r => r.json())
         .then(j => j as core.GameMap);
+}
+
+function createTicker(): utility.Event<void> {
+    const ticker = new utility.Event<void>();
+    window.setInterval(() => ticker.send(), 1000 * core.TickTime);
+    return ticker;
 }
 
 window.onload = () => {
@@ -23,6 +30,7 @@ window.onload = () => {
     }
 
     loadMap("dev0").then(map => {
+        const ticker = createTicker();
         const player = new sound.Player(new window.AudioContext());
         const keyboard = new input.Keyboard(new Map<string, string[]>(Object.entries({
             up: ["w", "ArrowUp"],
@@ -40,23 +48,25 @@ window.onload = () => {
         keyboard.listen("playDemo", () => {
             player.pingDemo(+((document.getElementById("pan") as HTMLInputElement).value));
         });
-        const renderer = new viz.Renderer(
-            document.getElementById("screen") as HTMLCanvasElement, map, 5);
         const ship = core.Ship.create(map);
-        window.setInterval(function () {
+        ticker.listen(() => {
             ship.tick(
                 +keyboard.has("up") - +keyboard.has("down"),
                 +keyboard.has("right") - +keyboard.has("left"),
             );
-            renderer.draw(ship);
-        }, 1000 * core.TickTime);
+        });
         ship.collisions.listen(e => {
             const [ship, hit] = e;
             console.log(ship.position, hit);
             player.collision();
-        })
+        });
         ship.finished.listen(() => {
             player.finished();
-        })
+        });
+
+        // Debug only
+        const renderer = new viz.Renderer(
+            document.getElementById("screen") as HTMLCanvasElement, map, 5);
+        ticker.listen(() => renderer.draw(ship));
     });
 };
