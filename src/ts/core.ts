@@ -43,32 +43,53 @@ export class HitTest {
         readonly normal?: utility.Vector
     ) { }
 
+    static getNormal(grid: Grid, x: number, y: number): utility.Vector | null {
+        const hasRight = x < grid.width - 1;
+        const hasLeft = 1 <= x;
+        const hasDown = y < grid.height - 1;
+        const hasUp = 1 <= y;
+        const cells = grid.cells;
+        const width = grid.width;
+        let dx = 0, dy = 0;
+
+        if (!(hasRight && hasLeft && hasUp && hasDown)) {
+            dx = +!hasRight - +!hasLeft;
+            dy = +!hasDown - +!hasUp;
+        } else {
+            dx = (
+                3 * +(cells[width * y + x + 1] === Cell.Terrain) +
+                +(cells[width * (y + 1) + x + 1] === Cell.Terrain) +
+                +(cells[width * (y - 1) + x + 1] === Cell.Terrain) +
+                3 * -(cells[width * y + x - 1] === Cell.Terrain) +
+                -(cells[width * (y + 1) + x - 1] === Cell.Terrain) +
+                -(cells[width * (y - 1) + x - 1] === Cell.Terrain)
+            );
+            dy = (
+                3 * +(cells[width * (y + 1) + x] === Cell.Terrain) +
+                +(cells[width * (y + 1) + x + 1] === Cell.Terrain) +
+                +(cells[width * (y + 1) + x - 1] === Cell.Terrain) +
+                3 * -(cells[width * (y - 1) + x] === Cell.Terrain) +
+                -(cells[width * (y - 1) + x + 1] === Cell.Terrain) +
+                -(cells[width * (y - 1) + x - 1] === Cell.Terrain)
+            );
+        }
+
+        if (dx === 0 && dy === 0) {
+            return null;
+        }
+        const normal: utility.Vector = [-dx, -dy];
+        const length = utility.vectorLength(normal);
+        normal[0] /= length;
+        normal[1] /= length;
+        return normal;
+    }
+
     static test(grid: Grid, position: utility.Vector): HitTest {
         const ox = Math.floor(position[0]);
         const oy = Math.floor(position[1]);
         const cell = grid.cells[grid.width * oy + ox];
-        let collision = (cell === Cell.Terrain);
-        let normal: utility.Vector = null;
-        if (collision) {
-            // Note: dx = (terrain_right - terrain_left)
-            const dx =
-                +(grid.width <= ox + 1 ? true : (grid.cells[grid.width * oy + ox + 1] === Cell.Terrain))
-                - +(ox - 1 < 0 ? true : (grid.cells[grid.width * oy + ox - 1] === Cell.Terrain));
-            const dy =
-                +(grid.height <= oy + 1 ? true : (grid.cells[grid.width * (oy + 1) + ox] === Cell.Terrain))
-                - +(oy - 1 < 0 ? true : (grid.cells[grid.width * (oy - 1) + ox] === Cell.Terrain));
-
-            if (dx === 0 && dy === 0) {
-                // This is unlikely - an "embedded" collision - just give up so we don't get stuck
-                collision = false;
-            } else {
-                normal = [-dx, -dy];
-                const length = utility.vectorLength(normal);
-                normal[0] /= length;
-                normal[1] /= length;
-            }
-        }
-        return new HitTest(collision, cell === Cell.Finish, normal);
+        const normal = (cell === Cell.Terrain) ? this.getNormal(grid, ox, oy) : null;
+        return new HitTest(normal !== null, cell === Cell.Finish, normal);
     }
 }
 

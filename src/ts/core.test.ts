@@ -6,9 +6,10 @@ import "./utility.test.js";
 
 test("collisions", () => {
     const cells = [
-        [1, 1, 0, 0],
-        [0, 0, 0, 1],
-        [0, 2, 1, 1],
+        [1, 0, 0, 1, 1],
+        [0, 0, 0, 1, 1],
+        [0, 2, 1, 1, 1],
+        [1, 1, 1, 1, 1],
     ];
     const grid = {
         cells: cells.flat(),
@@ -16,20 +17,35 @@ test("collisions", () => {
         height: cells.length,
     };
 
-    let hit = core.HitTest.test(grid, [2.9, 1.9]);
+    let hit = core.HitTest.test(grid, [2.1, 1.9]);
     expect(hit.collision).toBe(false);
     expect(hit.finish).toBe(false);
 
-    hit = core.HitTest.test(grid, [3.1, 1.9]);
+    // Simple
+    hit = core.HitTest.test(grid, [2.1, 2.1]);
     expect(hit.collision).toBe(true);
     expect(hit.finish).toBe(false);
     expect(hit.normal).toBeVector([-Math.SQRT1_2, -Math.SQRT1_2]);
 
+    // Embedded
+    hit = core.HitTest.test(grid, [3.1, 2.1]);
+    expect(hit.collision).toBe(true);
+    expect(hit.finish).toBe(false);
+    expect(hit.normal).toBeVector([-Math.SQRT1_2, -Math.SQRT1_2]);
+
+    // Diagonal bias
+    hit = core.HitTest.test(grid, [3.1, 1.5]);
+    expect(hit.collision).toBe(true);
+    expect(hit.finish).toBe(false);
+    expect(hit.normal).toBeVector([-4 / Math.sqrt(17), -1 / Math.sqrt(17)]);
+
+    // Boundary
     hit = core.HitTest.test(grid, [0.5, 0.5]);
     expect(hit.collision).toBe(true);
     expect(hit.finish).toBe(false);
-    expect(hit.normal).toBeVector([0, 1]);
+    expect(hit.normal).toBeVector([Math.SQRT1_2, Math.SQRT1_2]);
 
+    // Finish
     hit = core.HitTest.test(grid, [1.5, 2.5]);
     expect(hit.collision).toBe(false);
     expect(hit.finish).toBe(true);
