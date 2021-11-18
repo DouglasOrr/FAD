@@ -26,55 +26,63 @@ export class Player {
         source.start();
     }
 
-    private decay(value: number, duration: number): GainNode {
-        const node = new GainNode(this.context);
-        node.gain.value = value;
-        node.gain.exponentialRampToValueAtTime(value / 10, this.context.currentTime + duration);
-        return node
-    }
-
-    private addEcho(source: AudioNode, delay: number, gain: number): void {
-        source
+    private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
+        return source
             .connect(new DelayNode(this.context, { delayTime: delay, maxDelayTime: delay }))
             .connect(new GainNode(this.context, { gain: gain }))
-            .connect(this.context.destination);
+            .connect(new StereoPannerNode(this.context, { pan: pan }));
     }
 
     ping(pongs: core.Pong[]): void {
+        const startTime = this.context.currentTime + 0.01;
         const duration = 0.1;
-        const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 1000 });
+        const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 500 });
         const decay = new GainNode(this.context);
         decay.gain.value = 0;
-        decay.gain.linearRampToValueAtTime(0.5, this.context.currentTime + duration / 10);
-        decay.gain.linearRampToValueAtTime(0, this.context.currentTime + duration);
-        oscillator.connect(decay).connect(this.context.destination);
+        decay.gain.linearRampToValueAtTime(0.5, startTime + duration / 2);
+        decay.gain.linearRampToValueAtTime(0, startTime + duration);
+        oscillator.connect(decay)
+            .connect(new GainNode(this.context, { gain: 0.1 }))
+            .connect(this.context.destination);
 
+        let totalGain = 0;
         for (const pong of pongs) {
-            const gain = dbToGain(-pong.attenuation) / pongs.length;
-            if (0.01 < gain) {
-                this.addEcho(decay, pong.delay, gain);
-            }
+            totalGain += dbToGain(-pong.attenuation);
         }
-        oscillator.start();
-        oscillator.stop(this.context.currentTime + duration);
+        for (const pong of pongs) {
+            const gain = dbToGain(-pong.attenuation) / totalGain;
+            this.echo(decay, pong.delay, gain, Math.sin(pong.relativeBearing))
+                .connect(this.context.destination);
+        }
+        console.log(totalGain);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
     }
 
     collision(): void {
+        const startTime = this.context.currentTime + 0.01;
+        const duration = 0.5;
         const oscillator = new OscillatorNode(this.context, { type: "triangle" });
-        oscillator.frequency.setValueAtTime(200, this.context.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(100, this.context.currentTime + 0.5);
-        oscillator.connect(this.decay(1.0, 0.5)).connect(this.context.destination);
+        oscillator.frequency.setValueAtTime(200, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, startTime + duration);
+        const decay = new GainNode(this.context, { gain: 0.1 });
+        decay.gain.linearRampToValueAtTime(0.01, startTime + duration);
+        oscillator.connect(decay).connect(this.context.destination);
         oscillator.start();
-        oscillator.stop(this.context.currentTime + 0.5);
+        oscillator.stop(startTime + duration);
     }
 
     finished(): void {
+        const startTime = this.context.currentTime + 0.01;
+        const duration = 1.0;
         const baseFrequency = 440;
         for (const frequency of [baseFrequency, baseFrequency * 1.5, baseFrequency * 2]) {
             const oscillator = new OscillatorNode(this.context, { type: "triangle", frequency: frequency });
-            oscillator.connect(this.decay(0.5, 1.0)).connect(this.context.destination);
+            const decay = new GainNode(this.context, { gain: 0.1 });
+            decay.gain.linearRampToValueAtTime(0.01, startTime + duration);
+            oscillator.connect(decay).connect(this.context.destination);
             oscillator.start();
-            oscillator.stop(this.context.currentTime + 1.0);
+            oscillator.stop(this.context.currentTime + duration);
         }
     }
 }

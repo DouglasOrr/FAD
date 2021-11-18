@@ -7,16 +7,16 @@ import * as utility from "./utility.js";
 // Physics
 export const TickTime = 0.01;  // s
 export const ShipRadius = 2;  // px
-const RotationRate = 2.5;  // rad/s
-const Acceleration = 15;  // px/s/s
+const RotationRate = 2;  // rad/s
+const Acceleration = 30;  // px/s/s
 const ReboundAcceleration = 5;  // px/s/s
 const ReboundRestitution = 0.7;
-const Drag = 0.2;  // 1/px
+const Drag = 1;  // 1/px
 
 // Pings
 const PingCount = 32;
-const SpeedOfSound = 40;  // px/s
-const Attenuation = 0.4;  // dB/px
+const SpeedOfSound = 60;  // px/s
+const Attenuation = 1;  // dB/px
 
 export interface Grid {
     width: number;

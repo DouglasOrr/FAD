@@ -56,7 +56,7 @@ window.onload = () => {
                 +keyboard.has("right") - +keyboard.has("left"),
             );
         });
-        ship.collisions.listen(e => {
+        ship.collisions.listen(() => {
             player.collision();
         });
         ship.finished.listen(() => {
