@@ -4,8 +4,14 @@
 
 import * as core from "./core.js";
 
-function dbToGain(db: number): number {
+export function dbToGain(db: number): number {
     return Math.pow(10, db / 20);
+}
+
+export function triangleWave(x: number): number {
+    let delta = x / (2 * Math.PI) + 0.25;
+    delta -= Math.floor(delta);
+    return 1 - 4 * Math.abs(delta - 0.5);
 }
 
 export class Player {
@@ -51,7 +57,7 @@ export class Player {
         }
         for (const pong of pongs) {
             const gain = dbToGain(-pong.attenuation) / totalGain;
-            this.echo(decay, pong.delay, gain, Math.sin(pong.relativeBearing))
+            this.echo(decay, pong.delay, gain, triangleWave(pong.relativeBearing))
                 .connect(this.context.destination);
         }
         oscillator.start(startTime);
