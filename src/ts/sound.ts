@@ -14,11 +14,54 @@ export function triangleWave(x: number): number {
     return 1 - 4 * Math.abs(delta - 0.5);
 }
 
-export class Player {
-    private ping0: AudioBuffer;
+const AutoLocatorBaseGain = 0.05;
+const AutoLocatorBaseFrequency = 150;
+
+class AutoLocator {
+    private readonly positive: GainNode;
+    private readonly negative: GainNode;
 
     constructor(private readonly context: AudioContext) {
-        this.context = context;
+        const startTime = this.context.currentTime + 0.1;
+        this.positive = this.start(startTime, AutoLocatorBaseFrequency);
+        this.negative = this.start(startTime, AutoLocatorBaseFrequency * 4 / 3);
+        this.setDirection(0);
+    }
+
+    setDirection(direction: number) {
+        direction /= Math.PI;
+        // This function looks like this:
+        //          /\
+        //    \    /  \
+        //     ---+
+        //   -1   0   1
+        this.positive.gain.value = AutoLocatorBaseGain * Math.pow(
+            (direction < 0) ? Math.max(-1 - 3 / 2 * direction, 0) :
+                Math.min(3 / 2 * direction, 2 - 3 / 2 * direction),
+            2
+        );
+        this.negative.gain.value = AutoLocatorBaseGain * Math.pow(
+            (0 < direction) ? Math.max(-1 + 3 / 2 * direction, 0) :
+                Math.min(-3 / 2 * direction, 2 + 3 / 2 * direction),
+            2
+        );
+    }
+
+    private start(startTime: number, frequency: number): GainNode {
+        const source = new OscillatorNode(this.context, { frequency: frequency });
+        const gain = new GainNode(this.context, { gain: 0 });
+        source.connect(gain).connect(this.context.destination);
+        source.start(startTime);
+        return gain;
+    }
+}
+
+export class Player {
+    private ping0: AudioBuffer;
+    readonly autolocator: AutoLocator;
+
+    constructor(private readonly context: AudioContext) {
+        this.autolocator = new AutoLocator(context);
         (async () => {
             const response = await fetch("assets/ping0.mp3");
             const buffer = await response.arrayBuffer();
@@ -83,8 +126,9 @@ export class Player {
         const baseFrequency = 440;
         for (const frequency of [baseFrequency, baseFrequency * 1.5, baseFrequency * 2]) {
             const oscillator = new OscillatorNode(this.context, { type: "triangle", frequency: frequency });
-            const decay = new GainNode(this.context, { gain: 0.1 });
-            decay.gain.linearRampToValueAtTime(0.01, startTime + duration);
+            const decay = new GainNode(this.context, { gain: 0 });
+            decay.gain.linearRampToValueAtTime(0.05, startTime + duration / 10);
+            decay.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
             oscillator.connect(decay).connect(this.context.destination);
             oscillator.start();
             oscillator.stop(this.context.currentTime + duration);

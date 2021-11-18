@@ -21,7 +21,7 @@ const Attenuation = 1;  // dB/px
 export interface Grid {
     width: number;
     height: number;
-    cells: Array<number>;
+    cells: number[];
 }
 
 const enum Cell {
@@ -33,7 +33,7 @@ const enum Cell {
 export interface GameMap extends Grid {
     start: utility.Vector;
     start_bearing: number;
-    breadcrumbs: Array<utility.Vector>;
+    breadcrumbs: utility.Vector[];
 }
 
 export class HitTest {
@@ -93,6 +93,27 @@ export class HitTest {
     }
 }
 
+function closestBreadcrumbBearing(breadcrumbs: utility.Vector[], position: utility.Vector): number {
+    let closestDistance: number = Infinity;
+    let index: number;
+    for (let i = 0; i < breadcrumbs.length - 1; ++i) {
+        const start = breadcrumbs[i];
+        const end = breadcrumbs[i + 1];
+        const distance = utility.distanceToLine(start, end, position);
+        if (distance < closestDistance) {
+            closestDistance = distance;
+            index = i;
+        }
+    }
+    // Note: this still creates "hard jumps" between breadcrumbs
+    const target = breadcrumbs[index + 1];
+    const next = index < breadcrumbs.length - 2 ? breadcrumbs[index + 2] : target;
+    return Math.atan2(
+        position[0] - .5 * (target[0] + next[0]),
+        .5 * (target[1] + next[1]) - position[1]
+    );
+}
+
 export class Pong {
     constructor(
         readonly relativeBearing: number,
@@ -106,6 +127,7 @@ export class Ship {
     readonly collisions = new utility.Event<HitTest>();
     readonly finished = new utility.Event<void>();
     readonly pongs = new utility.Event<Pong[]>();
+    relativeBreadcrumbBearing = 0;
     private isFinished = false;
 
     constructor(
@@ -216,5 +238,11 @@ export class Ship {
         this.velocity[1] += acceleration[1] * TickTime;
         this.position[0] += this.velocity[0] * TickTime / 2;
         this.position[1] += this.velocity[1] * TickTime / 2;
+
+        // Update breadcrumb bearing
+        this.relativeBreadcrumbBearing = utility.bearingDifference(
+            this.bearing,
+            closestBreadcrumbBearing(this.map.breadcrumbs, this.position)
+        );
     }
 }
