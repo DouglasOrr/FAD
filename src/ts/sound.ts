@@ -54,7 +54,6 @@ export class Player {
             this.echo(decay, pong.delay, gain, Math.sin(pong.relativeBearing))
                 .connect(this.context.destination);
         }
-        console.log(totalGain);
         oscillator.start(startTime);
         oscillator.stop(startTime + duration);
     }
