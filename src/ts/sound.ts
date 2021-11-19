@@ -16,16 +16,22 @@ export function triangleWave(x: number): number {
 
 const AutoLocatorBaseGain = 0.05;
 const AutoLocatorBaseFrequency = 150;
+const AutoLocatorExponent = 1.5;
 
 class AutoLocator {
     private readonly positive: GainNode;
     private readonly negative: GainNode;
+    enabled = true;
 
     constructor(private readonly context: AudioContext) {
         const startTime = this.context.currentTime + 0.1;
         this.positive = this.start(startTime, AutoLocatorBaseFrequency);
         this.negative = this.start(startTime, AutoLocatorBaseFrequency * 4 / 3);
         this.setDirection(0);
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
     }
 
     setDirection(direction: number) {
@@ -35,15 +41,15 @@ class AutoLocator {
         //    \    /  \
         //     ---+
         //   -1   0   1
-        this.positive.gain.value = AutoLocatorBaseGain * Math.pow(
+        this.positive.gain.value = +this.enabled * AutoLocatorBaseGain * Math.pow(
             (direction < 0) ? Math.max(-1 - 3 / 2 * direction, 0) :
                 Math.min(3 / 2 * direction, 2 - 3 / 2 * direction),
-            2
+            AutoLocatorExponent
         );
-        this.negative.gain.value = AutoLocatorBaseGain * Math.pow(
+        this.negative.gain.value = +this.enabled * AutoLocatorBaseGain * Math.pow(
             (0 < direction) ? Math.max(-1 + 3 / 2 * direction, 0) :
                 Math.min(-3 / 2 * direction, 2 + 3 / 2 * direction),
-            2
+            AutoLocatorExponent
         );
     }
 

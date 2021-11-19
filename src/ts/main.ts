@@ -38,11 +38,13 @@ window.onload = () => {
             left: ["a", "ArrowLeft"],
             right: ["d", "ArrowRight"],
             ping: [" "],
+            toggleAutolocator: ["p"],
             playCollision: ["1"],
             playPing: ["2"],
             playFinished: ["3"],
             playDemo: ["9"],
         })));
+        keyboard.listen("toggleAutolocator", () => { player.autolocator.toggle(); });
         keyboard.listen("playCollision", () => { player.collision(); });
         keyboard.listen("playPing", () => { player.ping([]); });
         keyboard.listen("playFinished", () => { player.finished(); });
