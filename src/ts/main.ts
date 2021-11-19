@@ -38,7 +38,7 @@ window.onload = () => {
             left: ["a", "ArrowLeft"],
             right: ["d", "ArrowRight"],
             ping: [" "],
-            toggleAutolocator: ["p"],
+            toggleAutolocator: ["f"],
             playCollision: ["1"],
             playPing: ["2"],
             playFinished: ["3"],
