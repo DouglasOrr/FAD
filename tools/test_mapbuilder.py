@@ -19,7 +19,7 @@ def test_mappng():
         ".": mapbuilder.MapPng.TERRAIN,
         "s": mapbuilder.MapPng.START,
         "l": mapbuilder.MapPng.START_LOOK_AT,
-        "b": mapbuilder.MapPng.BREADCRUMB,
+        "b": mapbuilder.MapPng.BREADCRUMB_MASK,
         "f": mapbuilder.MapPng.FINISH,
         "i": mapbuilder.MapPng.INTERFERENCE,
     }
@@ -34,7 +34,7 @@ def test_mappng():
     converted = mapbuilder.MapPng(
         np.stack(
             [
-                [mapbuilder.int_to_rgba(char_to_colour[col]) for col in row]
+                [char_to_colour[col] for col in row]
                 for row in mapstr.strip("\n").split("\n")
             ]
         ).swapaxes(0, 1)
@@ -43,7 +43,7 @@ def test_mappng():
     assert converted["height"] == 6
     np.testing.assert_equal(converted["start"], [2, 2])
     np.testing.assert_approx_equal(converted["start_bearing"], -np.pi / 2)
-    np.testing.assert_equal(converted["breadcrumbs"], [[2, 4], [3, 4]])
+    np.testing.assert_equal(converted["routes"], [[[2, 2], [2, 4], [3, 4]]])
     np.testing.assert_equal(
         converted["cells"],
         np.array(

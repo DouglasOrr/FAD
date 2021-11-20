@@ -10,7 +10,9 @@ A map is a colour bitmap with a defined palette:
 | Transparent `#00000000` | Playable area | ✓ | ✓ |
 | Green `#ff00ff00` | Start point | ✗ | ✓ |
 | Dark Green `#ff008800` | Look at start point | ✗ | ✓ |
-| Blue `#ff0000ff` | Navigation breadcrumb | ✗ | ✓ |
+| Blue `#ff0000ff` | Navigation breadcrumb 1 | ✗ | ✓ |
+| Light Blue `#ff0088ff` | Navigation breadcrumb 2 | ✗ | ✓ |
+| Cyan `#ff00ffff` | Navigation breadcrumb 1 & 2 | ✗ | ✓ |
 | Red `#ffff0000` | Finish zone | ✓ | ✓ |
 | Yellow `#ffffff00` | Interference zone | ✓ | ✓ |
 
@@ -37,7 +39,10 @@ Before they are used by the game, the maps are preprocessed into this json forma
     "height": 128,
     "start": [26, 18],
     "start_bearing": 0.0,
-    "breadcrumbs": [[25, 34], [28, 91], [107, 103]],
+    "routes": [
+        [[25, 34], [28, 91], [107, 103]],
+        [[25, 34], [55, 60], [100, 60]]
+    ],
     "cells": [1, 1, 1, 1, 0, 0, 0, 0, 2, 2, ...],
 }
 ```
@@ -48,3 +53,8 @@ Note cell types:
  - `1` = terrain
  - `2` = finish zone
  - `3` = interference zone
+
+Note the routes format:
+
+ - Jagged shape `route x n_breadcrumbs x 2`
+ - Route dimension is selectable by the FAD

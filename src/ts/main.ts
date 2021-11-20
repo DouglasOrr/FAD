@@ -39,12 +39,12 @@ window.onload = () => {
             right: ["d", "ArrowRight"],
             ping: [" "],
             toggleAutolocator: ["f"],
+            cycleRoute: ["c"],
             playCollision: ["1"],
             playPing: ["2"],
             playFinished: ["3"],
             playDemo: ["9"],
         })));
-        keyboard.listen("toggleAutolocator", () => { player.autolocator.toggle(); });
         keyboard.listen("playCollision", () => { player.collision(); });
         keyboard.listen("playPing", () => { player.ping([]); });
         keyboard.listen("playFinished", () => { player.finished(); });
@@ -52,6 +52,8 @@ window.onload = () => {
             player.pingDemo(+((document.getElementById("pan") as HTMLInputElement).value));
         });
         const ship = core.Ship.create(map);
+        keyboard.listen("toggleAutolocator", () => { player.autolocator.toggle(); });
+        keyboard.listen("cycleRoute", () => { ship.cycleRoute(); });
         ticker.listen(() => {
             ship.tick(
                 +keyboard.has("up") - +keyboard.has("down"),

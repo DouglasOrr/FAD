@@ -34,7 +34,7 @@ export const enum Cell {
 export interface GameMap extends Grid {
     start: utility.Vector;
     start_bearing: number;
-    breadcrumbs: utility.Vector[];
+    routes: utility.Vector[][];
 }
 
 export class HitTest {
@@ -129,6 +129,7 @@ export class Ship {
     readonly finished = new utility.Event<void>();
     readonly pongs = new utility.Event<Pong[]>();
     relativeBreadcrumbBearing: number | null = null;
+    currentRoute = 0;
     private isFinished = false;
 
     constructor(
@@ -202,6 +203,10 @@ export class Ship {
         return new Pong(relativeBearing, delay, attenuation, yMajor ? [minor, major] : [major, minor]);
     }
 
+    cycleRoute(): void {
+        this.currentRoute = (this.currentRoute + 1) % this.map.routes.length;
+    }
+
     ping(): void {
         const pongs = [];
         for (let i = 0; i < PingCount; ++i) {
@@ -246,7 +251,7 @@ export class Ship {
         } else {
             this.relativeBreadcrumbBearing = utility.bearingDifference(
                 this.bearing,
-                closestBreadcrumbBearing(this.map.breadcrumbs, this.position)
+                closestBreadcrumbBearing(this.map.routes[this.currentRoute], this.position)
             );
         }
     }

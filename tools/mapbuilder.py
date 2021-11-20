@@ -2,7 +2,7 @@ import collections
 import enum
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import imageio
 import numpy as np
@@ -26,10 +26,14 @@ class Cell(enum.Enum):
 class MapPng:
     START = 0xFF00FF00
     START_LOOK_AT = 0xFF008800
-    BREADCRUMB = 0xFF0000FF
+    BREADCRUMB_MASK = 0xFF0000FF
     TERRAIN = 0xFF000000
     FINISH = 0xFFFF0000
     INTERFERENCE = 0xFFFFFF00
+
+    @classmethod
+    def is_breadcrumb(cls, colour: int) -> bool:
+        return (colour & cls.BREADCRUMB_MASK) == cls.BREADCRUMB_MASK
 
     def __init__(self, data: np.ndarray):
         self.data = data
@@ -37,13 +41,16 @@ class MapPng:
     @classmethod
     def load(cls, path: Path) -> "MapPng":
         # Transpose to format [x, y, channel]
-        return cls(imageio.imread(path).swapaxes(0, 1))
+        rgba = imageio.imread(path).swapaxes(0, 1)
+        # Convert pixels to colour integers
+        return cls(np.array([[rgba_to_int(pixel) for pixel in row] for row in rgba]))
 
-    def find_pixels(self, pixel: np.ndarray) -> np.ndarray:
-        return np.stack(np.where(np.all((self.data == pixel), -1)), -1)
+    def find_pixels(self, pixel: int, mask: Optional[int] = None) -> np.ndarray:
+        data = self.data if mask is None else (self.data & mask)
+        return np.stack(np.where(data == pixel), -1)
 
     def find_start(self) -> np.ndarray:
-        starts = self.find_pixels(int_to_rgba(self.START))
+        starts = self.find_pixels(self.START)
         if len(starts) != 1:
             raise ValueError(
                 f"Expected exactly 1 START pixel #{self.START:>08x},"
@@ -52,7 +59,7 @@ class MapPng:
         return starts[0]
 
     def find_start_look_at(self) -> np.ndarray:
-        look_at = self.find_pixels(int_to_rgba(self.START_LOOK_AT))
+        look_at = self.find_pixels(self.START_LOOK_AT)
         if len(look_at) != 1:
             raise ValueError(
                 f"Expected exactly 1 START_LOOK_AT pixel #{self.START_LOOK_AT:>08x},"
@@ -61,25 +68,42 @@ class MapPng:
         return look_at[0]
 
     def find_breadcrumbs(self) -> np.ndarray:
-        breadcrumbs = self.find_pixels(int_to_rgba(self.BREADCRUMB))
+        breadcrumbs = self.find_pixels(self.BREADCRUMB_MASK, self.BREADCRUMB_MASK)
         if not breadcrumbs.size:
             raise ValueError(
                 f"Expected at least one BREADCRUMB pixel #{self.BREADCRUMB:>08x}"
             )
         return breadcrumbs
 
-    def get_breadcrumbs_path(self) -> np.ndarray:
-        breadcrumbs = self.find_breadcrumbs()
+    def filter_breadcrumbs(
+        self, breadcrumbs: np.ndarray, alternative: bool
+    ) -> np.ndarray:
+        result = []
+        selected_green = 0x88 if alternative else 0x00
+        for x, y in breadcrumbs:
+            green = (self.data[x, y] >> 8) & 0xFF
+            if green not in {0x00, 0x88, 0xFF}:
+                raise ValueError(
+                    f"Unexpected green hue for breadcrumb {self.data[x, y]:>08x}"
+                )
+            if green == 0xFF or green == selected_green:
+                result.append([x, y])
+        return np.array(result)
+
+    def get_route(self, alternative: bool) -> Optional[np.ndarray]:
+        breadcrumbs = self.filter_breadcrumbs(self.find_breadcrumbs(), alternative)
+        if not breadcrumbs.size:
+            return None
         order = [self.find_start()]
         while breadcrumbs.size:
             idx = np.argmin(np.sum(((breadcrumbs - order[-1]) ** 2), -1))
             order.append(breadcrumbs[idx])
             breadcrumbs = np.delete(breadcrumbs, idx, axis=0)
-        return np.stack(order[1:])
+        return np.stack(order)
 
     def get_neighbour_colour(self, x: int, y: int) -> int:
         counts = collections.Counter(
-            rgba_to_int(self.data[xx, yy])
+            self.data[xx, yy]
             for xx, yy in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
         )
         order = counts.most_common()
@@ -90,8 +114,8 @@ class MapPng:
         return order[0][0]
 
     def get_cell(self, x: int, y: int) -> Cell:
-        colour = rgba_to_int(self.data[x, y])
-        if colour in {self.START, self.START_LOOK_AT, self.BREADCRUMB}:
+        colour = self.data[x, y]
+        if colour in {self.START, self.START_LOOK_AT} or self.is_breadcrumb(colour):
             colour = self.get_neighbour_colour(x, y)
         if not (colour & 0xFF000000):
             return Cell.BLANK
@@ -107,13 +131,18 @@ class MapPng:
         start = self.find_start()
         look = self.find_start_look_at() - start
         bearing = np.arctan2(-look[0], look[1])  # clockwise from +y
-        width, height, _ = self.data.shape
+        width, height = self.data.shape
+        routes = [
+            route.tolist()
+            for route in map(self.get_route, [False, True])
+            if route is not None
+        ]
         return dict(
             width=width,
             height=height,
             start=start.tolist(),
             start_bearing=bearing,
-            breadcrumbs=self.get_breadcrumbs_path().tolist(),
+            routes=routes,
             cells=[
                 self.get_cell(x, y).value for y in range(height) for x in range(width)
             ],

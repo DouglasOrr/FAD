@@ -56,15 +56,17 @@ export class Renderer {
         this.ctx.resetTransform();
         this.ctx.scale(this.options.scale, this.options.scale);
 
-        // Breadcrumbs
-        this.ctx.strokeStyle = "#0000ff";
-        this.ctx.lineWidth = .5 / this.options.scale;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.map.start[0] + 0.5, this.map.start[1] + 0.5);
-        for (const breadcrumb of this.map.breadcrumbs) {
-            this.ctx.lineTo(breadcrumb[0] + 0.5, breadcrumb[1] + 0.5);
+        // Routes
+        for (let [route, stroke] of [[0, "#0000ff"], [1, "#0088ff"]]) {
+            this.ctx.strokeStyle = stroke as string;
+            this.ctx.lineWidth = .5 / this.options.scale;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.map.start[0] + 0.5, this.map.start[1] + 0.5);
+            for (const breadcrumb of this.map.routes[route]) {
+                this.ctx.lineTo(breadcrumb[0] + 0.5, breadcrumb[1] + 0.5);
+            }
+            this.ctx.stroke();
         }
-        this.ctx.stroke();
 
         // Pongs
         if (this.pongTTL > 0) {
