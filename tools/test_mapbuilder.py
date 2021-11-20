@@ -21,12 +21,15 @@ def test_mappng():
         "l": mapbuilder.MapPng.START_LOOK_AT,
         "b": mapbuilder.MapPng.BREADCRUMB,
         "f": mapbuilder.MapPng.FINISH,
+        "i": mapbuilder.MapPng.INTERFERENCE,
     }
     mapstr = """
-.....
-.sl .
-.bbf.
-.....
+......
+.    .
+. sl .
+.ii f.
+.ibb .
+......
 """
     converted = mapbuilder.MapPng(
         np.stack(
@@ -36,19 +39,21 @@ def test_mappng():
             ]
         ).swapaxes(0, 1)
     ).to_jsonable()
-    assert converted["width"] == 5
-    assert converted["height"] == 4
-    np.testing.assert_equal(converted["start"], [1, 1])
+    assert converted["width"] == 6
+    assert converted["height"] == 6
+    np.testing.assert_equal(converted["start"], [2, 2])
     np.testing.assert_approx_equal(converted["start_bearing"], -np.pi / 2)
-    np.testing.assert_equal(converted["breadcrumbs"], [[1, 2], [2, 2]])
+    np.testing.assert_equal(converted["breadcrumbs"], [[2, 4], [3, 4]])
     np.testing.assert_equal(
         converted["cells"],
         np.array(
             [
-                [1, 1, 1, 1, 1],
-                [1, 0, 0, 0, 1],
-                [1, 0, 0, 2, 1],
-                [1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 1],
+                [1, 3, 3, 0, 2, 1],
+                [1, 3, 3, 0, 0, 1],
+                [1, 1, 1, 1, 1, 1],
             ]
         ).flatten(),
     )

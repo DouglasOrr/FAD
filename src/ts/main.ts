@@ -57,7 +57,7 @@ window.onload = () => {
                 +keyboard.has("up") - +keyboard.has("down"),
                 +keyboard.has("right") - +keyboard.has("left"),
             );
-            player.autolocator.setDirection(ship.relativeBreadcrumbBearing);
+            player.autolocator.set(ship.relativeBreadcrumbBearing);
         });
         ship.collisions.listen(() => {
             player.collision();

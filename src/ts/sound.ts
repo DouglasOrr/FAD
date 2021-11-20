@@ -27,14 +27,19 @@ class AutoLocator {
         const startTime = this.context.currentTime + 0.1;
         this.positive = this.start(startTime, AutoLocatorBaseFrequency);
         this.negative = this.start(startTime, AutoLocatorBaseFrequency * 4 / 3);
-        this.setDirection(0);
+        this.set(null);
     }
 
     toggle() {
         this.enabled = !this.enabled;
     }
 
-    setDirection(direction: number) {
+    set(direction: number | null) {
+        if (direction === null) {
+            this.positive.gain.value = 0;
+            this.negative.gain.value = 0;
+            return;
+        }
         direction /= Math.PI;
         // This function looks like this:
         //          /\

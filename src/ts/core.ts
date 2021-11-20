@@ -24,10 +24,11 @@ export interface Grid {
     cells: number[];
 }
 
-const enum Cell {
+export const enum Cell {
     Empty = 0,
     Terrain = 1,
     Finish = 2,
+    Interference = 3,
 }
 
 export interface GameMap extends Grid {
@@ -38,8 +39,8 @@ export interface GameMap extends Grid {
 
 export class HitTest {
     constructor(
+        readonly cell: Cell,
         readonly collision: boolean,
-        readonly finish: boolean,
         readonly normal?: utility.Vector
     ) { }
 
@@ -89,12 +90,12 @@ export class HitTest {
         const oy = Math.floor(position[1]);
         const cell = grid.cells[grid.width * oy + ox];
         const normal = (cell === Cell.Terrain) ? this.getNormal(grid, ox, oy) : null;
-        return new HitTest(normal !== null, cell === Cell.Finish, normal);
+        return new HitTest(cell, normal !== null, normal);
     }
 }
 
 function closestBreadcrumbBearing(breadcrumbs: utility.Vector[], position: utility.Vector): number {
-    let closestDistance: number = Infinity;
+    let closestDistance = Infinity;
     let index: number;
     for (let i = 0; i < breadcrumbs.length - 1; ++i) {
         const start = breadcrumbs[i];
@@ -127,7 +128,7 @@ export class Ship {
     readonly collisions = new utility.Event<HitTest>();
     readonly finished = new utility.Event<void>();
     readonly pongs = new utility.Event<Pong[]>();
-    relativeBreadcrumbBearing = 0;
+    relativeBreadcrumbBearing: number | null = null;
     private isFinished = false;
 
     constructor(
@@ -221,7 +222,7 @@ export class Ship {
             this.bounce(hit.normal);
             this.collisions.send(hit);
         }
-        if (hit.finish && !this.isFinished) {
+        if (hit.cell === Cell.Finish && !this.isFinished) {
             this.isFinished = true;
             this.finished.send();
         }
@@ -240,9 +241,13 @@ export class Ship {
         this.position[1] += this.velocity[1] * TickTime / 2;
 
         // Update breadcrumb bearing
-        this.relativeBreadcrumbBearing = utility.bearingDifference(
-            this.bearing,
-            closestBreadcrumbBearing(this.map.breadcrumbs, this.position)
-        );
+        if (hit.cell === Cell.Interference) {
+            this.relativeBreadcrumbBearing = null;
+        } else {
+            this.relativeBreadcrumbBearing = utility.bearingDifference(
+                this.bearing,
+                closestBreadcrumbBearing(this.map.breadcrumbs, this.position)
+            );
+        }
     }
 }

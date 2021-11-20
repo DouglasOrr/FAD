@@ -9,16 +9,16 @@ A map is a colour bitmap with a defined palette:
 | Black `#ff000000` | Impassable terrain | ✓ | ✓ |
 | Transparent `#00000000` | Playable area | ✓ | ✓ |
 | Green `#ff00ff00` | Start point | ✗ | ✓ |
-| Yellow `#ffffff00` | Look at start point | ✗ | ✓ |
+| Dark Green `#ff008800` | Look at start point | ✗ | ✓ |
 | Blue `#ff0000ff` | Navigation breadcrumb | ✗ | ✓ |
 | Red `#ffff0000` | Finish zone | ✓ | ✓ |
+| Yellow `#ffffff00` | Interference zone | ✓ | ✓ |
 
 Guidelines:
 
  - The playable area should be reasonably convex, with no tricky small-scale roughness to get stuck in.
  - Edges of the map should be covered with terrain.
  - There must be a 1 pixel wide route between start and finish zone.
- - The straight line between breadcrumbs should be well within the playable area, as this is the route the NPC leader will follow.
  - Breadcrumbs should extend into the finish zone.
  - Breadcrumbs describe a route using this simple greedy chaining rule:
     - Begin at the start point, iteratively pick the next fresh breadcrumb (by Euclidean distance), until all have been used.
@@ -42,6 +42,9 @@ Before they are used by the game, the maps are preprocessed into this json forma
 }
 ```
 
-This is reasonably self-explanatory, but note:
+Note cell types:
 
- - `cell == 0` means playable area, `1` is terrain, `2` is finish zone.
+ - `0` = playable area
+ - `1` = terrain
+ - `2` = finish zone
+ - `3` = interference zone

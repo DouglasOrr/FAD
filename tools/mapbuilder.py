@@ -1,3 +1,4 @@
+import collections
 import enum
 import json
 from pathlib import Path
@@ -19,14 +20,16 @@ class Cell(enum.Enum):
     BLANK = 0
     TERRAIN = 1
     FINISH = 2
+    INTERFERENCE = 3
 
 
 class MapPng:
     START = 0xFF00FF00
-    START_LOOK_AT = 0xFFFFFF00
+    START_LOOK_AT = 0xFF008800
     BREADCRUMB = 0xFF0000FF
     TERRAIN = 0xFF000000
     FINISH = 0xFFFF0000
+    INTERFERENCE = 0xFFFFFF00
 
     def __init__(self, data: np.ndarray):
         self.data = data
@@ -74,15 +77,30 @@ class MapPng:
             breadcrumbs = np.delete(breadcrumbs, idx, axis=0)
         return np.stack(order[1:])
 
+    def get_neighbour_colour(self, x: int, y: int) -> int:
+        counts = collections.Counter(
+            rgba_to_int(self.data[xx, yy])
+            for xx, yy in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
+        )
+        order = counts.most_common()
+        if 2 <= len(order) and order[0][1] == order[1][1]:
+            raise ValueError(
+                f"Point [{x}, {y}] has ambiguous colour from neighbours: {order}"
+            )
+        return order[0][0]
+
     def get_cell(self, x: int, y: int) -> Cell:
-        rgba = self.data[x, y]
-        colour = rgba_to_int(rgba)
-        if rgba[3] == 0 or colour in {self.START, self.START_LOOK_AT, self.BREADCRUMB}:
+        colour = rgba_to_int(self.data[x, y])
+        if colour in {self.START, self.START_LOOK_AT, self.BREADCRUMB}:
+            colour = self.get_neighbour_colour(x, y)
+        if not (colour & 0xFF000000):
             return Cell.BLANK
         if colour == self.TERRAIN:
             return Cell.TERRAIN
         if colour == self.FINISH:
             return Cell.FINISH
+        if colour == self.INTERFERENCE:
+            return Cell.INTERFERENCE
         raise ValueError(f"Bad pixel value #{colour:>08x} at {[x, y]}")
 
     def to_jsonable(self) -> Dict[str, Any]:
