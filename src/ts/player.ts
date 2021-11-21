@@ -63,7 +63,7 @@ class FAD {
 }
 
 export class Player {
-    private ping0: AudioBuffer;
+    // private ping0: AudioBuffer;
     readonly fad: FAD;
 
     constructor(private readonly context: AudioContext) {
@@ -71,14 +71,8 @@ export class Player {
         (async () => {
             const response = await fetch("assets/ping0.mp3");
             const buffer = await response.arrayBuffer();
-            this.ping0 = await context.decodeAudioData(buffer);
+            console.log(await context.decodeAudioData(buffer));
         })();
-    }
-
-    pingDemo(pan: number): void {
-        const source = new AudioBufferSourceNode(this.context, { buffer: this.ping0 });
-        source.connect(new StereoPannerNode(this.context, { pan: pan })).connect(this.context.destination);
-        source.start();
     }
 
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
@@ -86,6 +80,10 @@ export class Player {
             .connect(new DelayNode(this.context, { delayTime: delay, maxDelayTime: delay }))
             .connect(new GainNode(this.context, { gain: gain }))
             .connect(new StereoPannerNode(this.context, { pan: pan }));
+    }
+
+    resume(): void {
+        this.context.resume();
     }
 
     ping(pongs: core.Pong[]): void {

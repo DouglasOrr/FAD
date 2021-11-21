@@ -20,6 +20,12 @@ function createTicker(): utility.Event<void> {
     return ticker;
 }
 
+function createClicker(): utility.Event<void> {
+    const clicker = new utility.Event<void>();
+    window.addEventListener("click", () => { clicker.send() });
+    return clicker;
+}
+
 window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("autoreload")) {
@@ -32,6 +38,7 @@ window.onload = () => {
     loadMap("dev0").then(map => {
         const ticker = createTicker();
         const player = new Player(new window.AudioContext());
+        createClicker().listen(() => { player.resume() });
         const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
             up: ["w", "ArrowUp"],
             down: ["s", "ArrowDown"],
@@ -40,18 +47,7 @@ window.onload = () => {
             ping: [" "],
             toggleFAD: ["f"],
             cycleRoute: ["c"],
-            // Debug
-            playCollision: ["1"],
-            playPing: ["2"],
-            playFinished: ["3"],
-            playDemo: ["9"],
         })));
-        keyboard.listen("playCollision", () => { player.collision(); });
-        keyboard.listen("playPing", () => { player.ping([]); });
-        keyboard.listen("playFinished", () => { player.finished(); });
-        keyboard.listen("playDemo", () => {
-            player.pingDemo(+((document.getElementById("pan") as HTMLInputElement).value));
-        });
         const ship = core.Ship.create(map);
         keyboard.listen("toggleFAD", () => { ship.toggleFAD(); });
         keyboard.listen("cycleRoute", () => { ship.cycleRoute(); });
