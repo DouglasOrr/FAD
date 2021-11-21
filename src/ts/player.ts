@@ -14,24 +14,19 @@ export function triangleWave(x: number): number {
     return 1 - 4 * Math.abs(delta - 0.5);
 }
 
-const AutoLocatorBaseGain = 0.05;
-const AutoLocatorBaseFrequency = 150;
-const AutoLocatorExponent = 1.5;
+const FADBaseGain = 0.05;
+const FADBaseFrequency = 150;
+const FADExponent = 1.5;
 
-class AutoLocator {
+class FAD {
     private readonly positive: GainNode;
     private readonly negative: GainNode;
-    enabled = true;
 
     constructor(private readonly context: AudioContext) {
         const startTime = this.context.currentTime + 0.1;
-        this.positive = this.start(startTime, AutoLocatorBaseFrequency);
-        this.negative = this.start(startTime, AutoLocatorBaseFrequency * 4 / 3);
+        this.positive = this.start(startTime, FADBaseFrequency);
+        this.negative = this.start(startTime, FADBaseFrequency * 4 / 3);
         this.set(null);
-    }
-
-    toggle() {
-        this.enabled = !this.enabled;
     }
 
     set(direction: number | null) {
@@ -46,15 +41,15 @@ class AutoLocator {
         //    \    /  \
         //     ---+
         //   -1   0   1
-        this.positive.gain.value = +this.enabled * AutoLocatorBaseGain * Math.pow(
+        this.positive.gain.value = FADBaseGain * Math.pow(
             (direction < 0) ? Math.max(-1 - 3 / 2 * direction, 0) :
                 Math.min(3 / 2 * direction, 2 - 3 / 2 * direction),
-            AutoLocatorExponent
+            FADExponent
         );
-        this.negative.gain.value = +this.enabled * AutoLocatorBaseGain * Math.pow(
+        this.negative.gain.value = FADBaseGain * Math.pow(
             (0 < direction) ? Math.max(-1 + 3 / 2 * direction, 0) :
                 Math.min(-3 / 2 * direction, 2 + 3 / 2 * direction),
-            AutoLocatorExponent
+            FADExponent
         );
     }
 
@@ -69,10 +64,10 @@ class AutoLocator {
 
 export class Player {
     private ping0: AudioBuffer;
-    readonly autolocator: AutoLocator;
+    readonly fad: FAD;
 
     constructor(private readonly context: AudioContext) {
-        this.autolocator = new AutoLocator(context);
+        this.fad = new FAD(context);
         (async () => {
             const response = await fetch("assets/ping0.mp3");
             const buffer = await response.arrayBuffer();

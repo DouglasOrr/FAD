@@ -128,8 +128,11 @@ export class Ship {
     readonly collisions = new utility.Event<HitTest>();
     readonly finished = new utility.Event<void>();
     readonly pongs = new utility.Event<Pong[]>();
-    relativeBreadcrumbBearing: number | null = null;
-    currentRoute = 0;
+    readonly routeChanged = new utility.Event<number>();
+
+    private fadEnabled = true;
+    private relativeBreadcrumbBearing: number | null = null;
+    private currentRoute = 0;
     private isFinished = false;
 
     constructor(
@@ -203,8 +206,19 @@ export class Ship {
         return new Pong(relativeBearing, delay, attenuation, yMajor ? [minor, major] : [major, minor]);
     }
 
+    get fadBearing(): number {
+        return this.relativeBreadcrumbBearing;
+    }
+
+    toggleFAD(): void {
+        this.fadEnabled = !this.fadEnabled;
+    }
+
     cycleRoute(): void {
         this.currentRoute = (this.currentRoute + 1) % this.map.routes.length;
+        if (this.map.routes.length) {
+            this.routeChanged.send(this.currentRoute);
+        }
     }
 
     ping(): void {
@@ -246,7 +260,7 @@ export class Ship {
         this.position[1] += this.velocity[1] * TickTime / 2;
 
         // Update breadcrumb bearing
-        if (hit.cell === Cell.Interference) {
+        if (!this.fadEnabled || hit.cell === Cell.Interference) {
             this.relativeBreadcrumbBearing = null;
         } else {
             this.relativeBreadcrumbBearing = utility.bearingDifference(
