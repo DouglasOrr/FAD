@@ -3,9 +3,9 @@
  */
 
 import * as core from "./core.js";
-import * as viz from "./viz.js";
-import * as sound from "./sound.js";
-import * as input from "./input.js";
+import { Renderer } from "./renderer.js";
+import { Player } from "./player.js";
+import { Keyboard } from "./keyboard.js";
 import * as utility from "./utility.js";
 
 async function loadMap(name: string): Promise<core.GameMap> {
@@ -31,8 +31,8 @@ window.onload = () => {
 
     loadMap("dev0").then(map => {
         const ticker = createTicker();
-        const player = new sound.Player(new window.AudioContext());
-        const keyboard = new input.Keyboard(new Map<string, string[]>(Object.entries({
+        const player = new Player(new window.AudioContext());
+        const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
             up: ["w", "ArrowUp"],
             down: ["s", "ArrowDown"],
             left: ["a", "ArrowLeft"],
@@ -75,7 +75,7 @@ window.onload = () => {
         });
 
         // Debug only
-        const renderer = new viz.Renderer(
+        const renderer = new Renderer(
             map, ship, document.getElementById("screen") as HTMLCanvasElement,
             { scale: 5 },
         );

@@ -57,7 +57,7 @@ export class Renderer {
         this.ctx.scale(this.options.scale, this.options.scale);
 
         // Routes
-        for (let [route, stroke] of [[0, "#0000ff"], [1, "#0088ff"]]) {
+        for (const [route, stroke] of [[0, "#0000ff"], [1, "#0088ff"]]) {
             this.ctx.strokeStyle = stroke as string;
             this.ctx.lineWidth = .5 / this.options.scale;
             this.ctx.beginPath();
