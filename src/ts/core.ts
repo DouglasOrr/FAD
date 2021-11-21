@@ -94,7 +94,7 @@ export class HitTest {
     }
 }
 
-function closestBreadcrumbBearing(breadcrumbs: utility.Vector[], position: utility.Vector): number {
+function findSegment(breadcrumbs: utility.Vector[], position: utility.Vector): number {
     let closestDistance = Infinity;
     let index: number;
     for (let i = 0; i < breadcrumbs.length - 1; ++i) {
@@ -106,6 +106,10 @@ function closestBreadcrumbBearing(breadcrumbs: utility.Vector[], position: utili
             index = i;
         }
     }
+    return index;
+}
+
+function breadcrumbBearing(breadcrumbs: utility.Vector[], index: number, position: utility.Vector): number {
     // Note: this still creates "hard jumps" between breadcrumbs
     const target = breadcrumbs[index + 1];
     const next = index < breadcrumbs.length - 2 ? breadcrumbs[index + 2] : target;
@@ -126,14 +130,14 @@ export class Pong {
 
 export class Ship {
     readonly collisions = new utility.Event<HitTest>();
-    readonly finished = new utility.Event<void>();
     readonly pongs = new utility.Event<Pong[]>();
     readonly routeChanged = new utility.Event<number>();
+    readonly segmentChanged = new utility.Event<[number, number]>();
 
     private fadEnabled = true;
-    private relativeBreadcrumbBearing: number | null = null;
+    private relativeBreadcrumbBearing: number = null;
     private currentRoute = 0;
-    private isFinished = false;
+    private currentSegment: number = null;
 
     constructor(
         public readonly position: utility.Vector,
@@ -218,6 +222,7 @@ export class Ship {
         this.currentRoute = (this.currentRoute + 1) % this.map.routes.length;
         if (this.map.routes.length) {
             this.routeChanged.send(this.currentRoute);
+            this.currentSegment = null;
         }
     }
 
@@ -241,10 +246,6 @@ export class Ship {
             this.bounce(hit.normal);
             this.collisions.send(hit);
         }
-        if (hit.cell === Cell.Finish && !this.isFinished) {
-            this.isFinished = true;
-            this.finished.send();
-        }
 
         // Update position
         const speed = utility.vectorLength(this.velocity);
@@ -259,14 +260,19 @@ export class Ship {
         this.position[0] += this.velocity[0] * TickTime / 2;
         this.position[1] += this.velocity[1] * TickTime / 2;
 
-        // Update breadcrumb bearing
+        // Update segments
+        const segment = findSegment(this.map.routes[this.currentRoute], this.position);
         if (!this.fadEnabled || hit.cell === Cell.Interference) {
             this.relativeBreadcrumbBearing = null;
         } else {
             this.relativeBreadcrumbBearing = utility.bearingDifference(
                 this.bearing,
-                closestBreadcrumbBearing(this.map.routes[this.currentRoute], this.position)
+                breadcrumbBearing(this.map.routes[this.currentRoute], segment, this.position)
             );
+        }
+        if (segment !== this.currentSegment) {
+            this.currentSegment = segment;
+            this.segmentChanged.send([this.currentRoute, this.currentSegment]);
         }
     }
 }

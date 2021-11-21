@@ -61,14 +61,14 @@ window.onload = () => {
         ship.collisions.listen(() => {
             player.collision();
         });
-        ship.finished.listen(() => {
-            player.finished();
-        });
         keyboard.listen("ping", () => {
             ship.ping();
         });
         ship.pongs.listen((e) => {
             player.ping(e);
+        });
+        ship.segmentChanged.listen(([route, segment]) => {
+            console.log(`Segment ${route}:${segment}`);
         });
 
         // Debug only
