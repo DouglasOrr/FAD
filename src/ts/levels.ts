@@ -101,6 +101,10 @@ class Level_1 extends Level {
             this.state = Level_1_State.Intro;
             this.handleState();
         }
+        if (this.state === Level_1_State.Play) {
+            this.playing.stop();
+            this.playing = this.player.play("assets/1.help.mp3", 0);
+        }
         super.beacon();
     }
 
