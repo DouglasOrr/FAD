@@ -3,6 +3,7 @@
  */
 
 import * as core from "./core.js";
+import * as utility from "./utility.js";
 
 export function dbToGain(db: number): number {
     return Math.pow(10, db / 20);
@@ -62,6 +63,32 @@ class FAD {
     }
 }
 
+export class Playback {
+    readonly ended = new utility.Event<void>();
+    private stopped = false;
+
+    constructor(private element: HTMLAudioElement, readonly endDelay: number) {
+        element.addEventListener("ended", () => {
+            if (!this.stopped) {
+                if (endDelay === 0) {
+                    this.ended.send();
+                } else {
+                    window.setTimeout(() => {
+                        if (!this.stopped) {
+                            this.ended.send();
+                        }
+                    }, endDelay);
+                }
+            }
+        }, { once: true });
+    }
+
+    stop() {
+        this.stopped = true;
+        this.element.pause();
+    }
+}
+
 export class Player {
     // private ping0: AudioBuffer;
     readonly fad: FAD;
@@ -75,15 +102,40 @@ export class Player {
         })();
     }
 
+    // Control
+
+    whenEnabled(listener: utility.EventListener<void>): void {
+        if (this.context.state === "running") {
+            listener();
+        } else {
+            this.context.addEventListener("statechange", () => {
+                listener();
+            }, { once: true });
+        }
+    }
+
+    resume(): void {
+        if (this.context.state !== "running") {
+            this.context.resume();
+        }
+    }
+
+    // Sounds
+
+    play(path: string, endDelay: number): Playback {
+        const element = document.createElement("audio");
+        element.src = path;
+        const source = new MediaElementAudioSourceNode(this.context, { mediaElement: element });
+        source.connect(this.context.destination);
+        element.play();
+        return new Playback(element, endDelay);
+    }
+
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
         return source
             .connect(new DelayNode(this.context, { delayTime: delay, maxDelayTime: delay }))
             .connect(new GainNode(this.context, { gain: gain }))
             .connect(new StereoPannerNode(this.context, { pan: pan }));
-    }
-
-    resume(): void {
-        this.context.resume();
     }
 
     ping(pongs: core.Pong[]): void {

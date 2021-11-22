@@ -3,16 +3,11 @@
  */
 
 import * as core from "./core.js";
-import { Renderer } from "./renderer.js";
+import * as mrenderer from "./renderer.js";
 import { Player } from "./player.js";
 import { Keyboard } from "./keyboard.js";
 import * as utility from "./utility.js";
-
-async function loadMap(name: string): Promise<core.GameMap> {
-    return fetch(`assets/${name}.map.json`)
-        .then(r => r.json())
-        .then(j => j as core.GameMap);
-}
+import * as levels from "./levels.js";
 
 function createTicker(): utility.Event<void> {
     const ticker = new utility.Event<void>();
@@ -34,49 +29,41 @@ window.onload = () => {
         script.src = "https://livejs.com/live.js";
         document.head.appendChild(script);
     }
-
-    loadMap("dev0").then(map => {
-        const ticker = createTicker();
-        const player = new Player(new window.AudioContext());
-        createClicker().listen(() => { player.resume() });
-        const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
-            up: ["w", "ArrowUp"],
-            down: ["s", "ArrowDown"],
-            left: ["a", "ArrowLeft"],
-            right: ["d", "ArrowRight"],
-            ping: [" "],
-            toggleFAD: ["f"],
-            cycleRoute: ["c"],
-        })));
-        const ship = core.Ship.create(map);
-        keyboard.listen("toggleFAD", () => { ship.toggleFAD(); });
-        keyboard.listen("cycleRoute", () => { ship.cycleRoute(); });
-        ticker.listen(() => {
-            ship.tick(
-                +keyboard.has("up") - +keyboard.has("down"),
-                +keyboard.has("right") - +keyboard.has("left"),
-            );
-            player.fad.set(ship.fadBearing);
-        });
-        ship.collisions.listen(() => {
-            player.collision();
-        });
-        keyboard.listen("ping", () => {
-            ship.ping();
-        });
-        ship.pongs.listen((e) => {
-            player.ping(e);
-        });
-        ship.segmentChanged.listen(([route, segment]) => {
-            console.log(`Segment ${route}:${segment}`);
-        });
-
-        // Debug only
-        const renderer = new Renderer(
-            map, ship, document.getElementById("screen") as HTMLCanvasElement,
-            { scale: 5 },
+    let debugRender: mrenderer.Settings = null;
+    if (params.has("debug")) {
+        debugRender = {
+            canvas: document.getElementById("screen") as HTMLCanvasElement,
+            scale: 5,
+            showPongTime: 1,
+        };
+    }
+    const ticker = createTicker();
+    const player = new Player(new window.AudioContext());
+    createClicker().listen(() => { player.resume() });
+    const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
+        up: ["w", "ArrowUp"],
+        down: ["s", "ArrowDown"],
+        left: ["a", "ArrowLeft"],
+        right: ["d", "ArrowRight"],
+        ping: [" "],
+        toggleFAD: ["f"],
+        cycleRoute: ["c"],
+        beacon: ["k"],
+    })));
+    let level: levels.Level = null;
+    ticker.listen(() => {
+        level?.tick(
+            +keyboard.has("up") - +keyboard.has("down"),
+            +keyboard.has("right") - +keyboard.has("left"),
         );
-        ticker.listen(() => renderer.draw());
-        ship.pongs.listen((e) => { renderer.addPongs(e); });
+    });
+    keyboard.listen("toggleFAD", () => { level?.toggleFAD(); });
+    keyboard.listen("cycleRoute", () => { level?.cycleRoute(); });
+    keyboard.listen("ping", () => { level?.ping(); });
+    keyboard.listen("beacon", () => { level?.beacon(); })
+    player.whenEnabled(() => {
+        levels.loadFirstLevel(player, debugRender).then(lvl => {
+            level = lvl;
+        });
     });
 };

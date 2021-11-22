@@ -4,7 +4,11 @@
 
 import * as core from "./core.js";
 
-const ShowPongTime = 1;
+export interface Settings {
+    canvas: HTMLCanvasElement;
+    scale: number;
+    showPongTime: number;
+}
 
 export class Renderer {
     private readonly ctx: CanvasRenderingContext2D;
@@ -15,24 +19,23 @@ export class Renderer {
     constructor(
         readonly map: core.GameMap,
         readonly ship: core.Ship,
-        canvas: HTMLCanvasElement,
-        readonly options: { scale: number },
+        readonly settings: Settings,
     ) {
-        canvas.width = options.scale * map.width;
-        canvas.height = options.scale * map.height;
-        this.ctx = canvas.getContext("2d");
+        settings.canvas.width = settings.scale * map.width;
+        settings.canvas.height = settings.scale * map.height;
+        this.ctx = settings.canvas.getContext("2d");
         // Pre-render the background image
-        this.background = this.ctx.createImageData(canvas.width, canvas.height);
+        this.background = this.ctx.createImageData(settings.canvas.width, settings.canvas.height);
         const data = this.background.data;
         const cellTypeToColour = [0xffffff, 0x000000, 0xffbbbb, 0xffffbb];
         // Manually scale the image up - not pretty!
         for (let y = 0; y < map.width; ++y) {
             for (let x = 0; x < map.width; ++x) {
                 const colour = cellTypeToColour[map.cells[y * map.width + x]];
-                for (let yy = 0; yy < options.scale; ++yy) {
-                    for (let xx = 0; xx < options.scale; ++xx) {
-                        const idx = map.width * options.scale * (options.scale * y + yy)
-                            + (options.scale * x + xx);
+                for (let yy = 0; yy < settings.scale; ++yy) {
+                    for (let xx = 0; xx < settings.scale; ++xx) {
+                        const idx = map.width * settings.scale * (settings.scale * y + yy)
+                            + (settings.scale * x + xx);
                         data[4 * idx + 0] = (colour >> 16) & 0xff;
                         data[4 * idx + 1] = (colour >> 8) & 0xff;
                         data[4 * idx + 2] = (colour) & 0xff;
@@ -45,7 +48,7 @@ export class Renderer {
 
     addPongs(pongs: core.Pong[]) {
         this.pongs = pongs;
-        this.pongTTL = ShowPongTime;
+        this.pongTTL = this.settings.showPongTime;
     }
 
     draw(): void {
@@ -54,12 +57,15 @@ export class Renderer {
 
         // Transform
         this.ctx.resetTransform();
-        this.ctx.scale(this.options.scale, this.options.scale);
+        this.ctx.scale(this.settings.scale, this.settings.scale);
 
         // Routes
         for (const [route, stroke] of [[0, "#0000ff"], [1, "#0088ff"]]) {
+            if (this.map.routes.length <= route) {
+                continue;
+            }
             this.ctx.strokeStyle = stroke as string;
-            this.ctx.lineWidth = .5 / this.options.scale;
+            this.ctx.lineWidth = .5 / this.settings.scale;
             this.ctx.beginPath();
             this.ctx.moveTo(this.map.start[0] + 0.5, this.map.start[1] + 0.5);
             for (const breadcrumb of this.map.routes[route]) {
