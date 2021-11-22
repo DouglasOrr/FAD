@@ -65,16 +65,19 @@ class FAD {
 
 export class Playback {
     readonly ended = new utility.Event<void>();
-    private stopped = false;
+    private _stopped = false;
+    private _ended = false;
 
     constructor(private element: HTMLAudioElement, readonly endDelay: number) {
         element.addEventListener("ended", () => {
-            if (!this.stopped) {
+            if (!this._stopped) {
                 if (endDelay === 0) {
+                    this._ended = true;
                     this.ended.send();
                 } else {
                     window.setTimeout(() => {
-                        if (!this.stopped) {
+                        if (!this._stopped) {
+                            this._ended = true;
                             this.ended.send();
                         }
                     }, endDelay);
@@ -83,8 +86,11 @@ export class Playback {
         }, { once: true });
     }
 
+    get is_ended(): boolean { return this._ended; }
+    get is_stopped(): boolean { return this._stopped; }
+
     stop() {
-        this.stopped = true;
+        this._stopped = true;
         this.element.pause();
     }
 }

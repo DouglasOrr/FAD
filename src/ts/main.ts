@@ -48,6 +48,7 @@ window.onload = () => {
         ping: [" "],
         toggleFAD: ["f"],
         cycleRoute: ["c"],
+        replay: ["r"],
         beacon: ["k"],
     })));
     let level: levels.Level = null;
@@ -60,7 +61,8 @@ window.onload = () => {
     keyboard.listen("toggleFAD", () => { level?.toggleFAD(); });
     keyboard.listen("cycleRoute", () => { level?.cycleRoute(); });
     keyboard.listen("ping", () => { level?.ping(); });
-    keyboard.listen("beacon", () => { level?.beacon(); })
+    keyboard.listen("beacon", () => { level?.beacon(); });
+    keyboard.listen("replay", () => { level?.replay(); });
     player.whenEnabled(() => {
         levels.loadFirstLevel(player, debugRender).then(lvl => {
             level = lvl;

@@ -9,6 +9,8 @@ import * as mrenderer from "./renderer.js";
 export class Level {
     protected readonly ship: core.Ship;
     private readonly renderer: mrenderer.Renderer;
+    private playing: mplayer.Playback;
+    private lastRadioMessage: string;
 
     constructor(
         protected readonly map: core.GameMap,
@@ -31,8 +33,19 @@ export class Level {
         this.init();
     }
 
-    init(): void {
+    protected init(): void {
         // empty
+    }
+
+    protected playRadio(message: string, settings: { delay?: number, then?: () => void, saveReplay?: boolean }): void {
+        this.playing?.stop();
+        if (settings.saveReplay == null || settings.saveReplay) {
+            this.lastRadioMessage = message;
+        }
+        this.playing = this.player.play(`assets/${message}.mp3`, 1000 * (settings.delay || 0));
+        if (settings.then) {
+            this.playing.ended.listen(settings.then);
+        }
     }
 
     tick(thrust: number, rotate: number): void {
@@ -54,6 +67,13 @@ export class Level {
     beacon(): void {
         // empty
     }
+    replay(): void {
+        if (this.playing?.is_ended || this.playing?.is_stopped) {
+            this.playRadio(this.lastRadioMessage, { saveReplay: false });
+        } else {
+            // TODO - ship tone
+        }
+    }
 }
 
 enum Level_1_State {
@@ -65,45 +85,37 @@ enum Level_1_State {
 
 class Level_1 extends Level {
     private state: Level_1_State;
-    private playing: mplayer.Playback;
 
-    override init(): void {
-        this.state = Level_1_State.Start;
+    protected override init(): void {
         this.ship.toggleFAD();
-        this.handleState();
+        this.handleState(Level_1_State.Start);
     }
 
-    private handleState(): void {
+    private handleState(newState?: Level_1_State): void {
+        if (newState !== undefined) {
+            this.state = newState;
+        }
         console.log(this.state);
-        this.playing?.stop();
         if (this.state === Level_1_State.Start) {
-            this.playing = this.player.play("assets/1.1_can_you_hear_me.mp3", 2000);
-            this.playing.ended.listen(() => { this.handleState(); });
+            this.playRadio("1.1_can_you_hear_me", { delay: 2, then: () => this.handleState() });
         }
         if (this.state === Level_1_State.Intro) {
-            this.playing = this.player.play("assets/1.2_intro.mp3", 0);
-            this.playing.ended.listen(() => {
-                this.state = Level_1_State.FAD;
-                this.handleState();
-            });
+            this.playRadio("1.2_intro", { then: () => this.handleState(Level_1_State.FAD) });
         }
         if (this.state === Level_1_State.FAD) {
-            this.playing = this.player.play("assets/1.3_fad.mp3", 2000);
-            this.playing.ended.listen(() => { this.handleState(); });
+            this.playRadio("1.3_fad", { delay: 2, then: () => this.handleState() });
         }
         if (this.state === Level_1_State.Play) {
-            this.playing = this.player.play("assets/1.4_drive.mp3", 0);
+            this.playRadio("1.4_drive", {});
         }
     }
 
     beacon(): void {
         if (this.state === Level_1_State.Start) {
-            this.state = Level_1_State.Intro;
-            this.handleState();
+            this.handleState(Level_1_State.Intro);
         }
         if (this.state === Level_1_State.Play) {
-            this.playing.stop();
-            this.playing = this.player.play("assets/1.help.mp3", 0);
+            this.playRadio("1.help", { saveReplay: false });
         }
         super.beacon();
     }
@@ -113,8 +125,7 @@ class Level_1 extends Level {
             return;
         }
         if (this.state === Level_1_State.FAD) {
-            this.state = Level_1_State.Play;
-            this.handleState();
+            this.handleState(Level_1_State.Play);
         }
         super.toggleFAD();
     }
