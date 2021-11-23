@@ -71,7 +71,7 @@ class MapPng:
         breadcrumbs = self.find_pixels(self.BREADCRUMB_MASK, self.BREADCRUMB_MASK)
         if not breadcrumbs.size:
             raise ValueError(
-                f"Expected at least one BREADCRUMB pixel #{self.BREADCRUMB:>08x}"
+                f"Expected at least one BREADCRUMB pixel #{self.BREADCRUMB_MASK:>08x}"
             )
         return breadcrumbs
 

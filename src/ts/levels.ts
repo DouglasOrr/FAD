@@ -5,8 +5,10 @@
 import * as core from "./core.js";
 import * as mplayer from "./player.js";
 import * as mrenderer from "./renderer.js";
+import * as utility from "./utility.js";
 
 export class Level {
+    readonly finished: utility.Event<void> = new utility.Event();
     protected readonly ship: core.Ship;
     private readonly renderer: mrenderer.Renderer;
     private playing: mplayer.Playback;
@@ -28,7 +30,10 @@ export class Level {
             this.renderer?.addPongs(e);
         });
         this.ship.segmentChanged.listen(([route, segment]) => {
-            console.log(`Segment ${route}:${segment}`);
+            console.log(`Segment ${route}:${segment} of ${map.routes[route].length}`);
+            if (map.routes[route].length - 2 <= segment) {
+                this.finish();
+            }
         });
         this.init();
     }
@@ -37,15 +42,23 @@ export class Level {
         // empty
     }
 
-    protected playRadio(message: string, settings: { delay?: number, then?: () => void, saveReplay?: boolean }): void {
+    protected playRadio(
+        message: string,
+        settings: { startDelay?: number, delay?: number, then?: () => void, saveReplay?: boolean }
+    ): void {
         this.playing?.stop();
         if (settings.saveReplay == null || settings.saveReplay) {
             this.lastRadioMessage = message;
         }
-        this.playing = this.player.play(`assets/${message}.mp3`, 1000 * (settings.delay || 0));
+        this.playing = this.player.play(`assets/${message}.mp3`, { startDelay: 1000 * settings.startDelay, endDelay: 1000 * settings.delay });
         if (settings.then) {
             this.playing.ended.listen(settings.then);
         }
+    }
+
+    protected finish(): void {
+        this.finished.send();
+        this.playing.stop();
     }
 
     tick(thrust: number, rotate: number): void {
@@ -56,10 +69,12 @@ export class Level {
         }
     }
     toggleFAD(): void {
-        this.ship.toggleFAD();
+        const enabled = this.ship.toggleFAD();
+        this.player.play(`assets/${enabled ? "fad_active" : "fad_disabled"}.mp3`, {});
     }
     cycleRoute(): void {
-        this.ship.cycleRoute();
+        const route = this.ship.cycleRoute();
+        this.player.play(`assets/${["primary_beacons", "secondary_beacons"][route]}.mp3`, {});
     }
     ping(): void {
         this.ship.ping();
@@ -76,63 +91,101 @@ export class Level {
     }
 }
 
-enum Level_1_State {
+class Level0 extends Level {
+    protected override init(): void {
+        this.ship.toggleFAD();
+        this.playRadio("0.1_intro", { then: () => this.loop() });
+    }
+
+    private loop(): void {
+        this.playRadio("0.1_ready", { delay: 2, then: () => this.loop() });
+    }
+
+    ping(): void {
+        this.finish();
+    }
+}
+
+enum Level1State {
     Start,
     Intro,
     FAD,
     Play,
 }
 
-class Level_1 extends Level {
-    private state: Level_1_State;
+class Level1 extends Level {
+    private state: Level1State;
 
     protected override init(): void {
         this.ship.toggleFAD();
-        this.handleState(Level_1_State.Start);
+        this.handleState(Level1State.Start);
     }
 
-    private handleState(newState?: Level_1_State): void {
+    private handleState(newState?: Level1State): void {
         if (newState !== undefined) {
             this.state = newState;
         }
-        console.log(this.state);
-        if (this.state === Level_1_State.Start) {
+        if (this.state === Level1State.Start) {
             this.playRadio("1.1_can_you_hear_me", { delay: 2, then: () => this.handleState() });
         }
-        if (this.state === Level_1_State.Intro) {
-            this.playRadio("1.2_intro", { then: () => this.handleState(Level_1_State.FAD) });
+        if (this.state === Level1State.Intro) {
+            this.playRadio("1.2_intro", { then: () => this.handleState(Level1State.FAD) });
         }
-        if (this.state === Level_1_State.FAD) {
+        if (this.state === Level1State.FAD) {
             this.playRadio("1.3_fad", { delay: 2, then: () => this.handleState() });
         }
-        if (this.state === Level_1_State.Play) {
-            this.playRadio("1.4_drive", {});
+        if (this.state === Level1State.Play) {
+            this.playRadio("1.4_drive", { startDelay: 2 });
         }
     }
 
     beacon(): void {
-        if (this.state === Level_1_State.Start) {
-            this.handleState(Level_1_State.Intro);
+        if (this.state === Level1State.Start) {
+            this.handleState(Level1State.Intro);
         }
-        if (this.state === Level_1_State.Play) {
+        if (this.state === Level1State.Play) {
             this.playRadio("1.help", { saveReplay: false });
         }
         super.beacon();
     }
 
     toggleFAD(): void {
-        if (this.state < Level_1_State.FAD) {
+        if (this.state < Level1State.FAD) {
             return;
         }
-        if (this.state === Level_1_State.FAD) {
-            this.handleState(Level_1_State.Play);
+        if (this.state === Level1State.FAD) {
+            this.handleState(Level1State.Play);
         }
         super.toggleFAD();
     }
 }
 
-export async function loadFirstLevel(player: mplayer.Player, debugRender: mrenderer.Settings): Promise<Level> {
-    const response = await fetch("assets/lvl0.map.json");
+class Level2 extends Level {
+    protected override init(): void {
+        this.ship.segmentChanged.listen(([route, segment]) => {
+            if (route === 0 && segment === 28) {
+                this.playRadio("dev_secondary_beacons", {});
+            }
+            if (route === 1 && segment === 34) {
+                this.playRadio("dev_primary_beacons", {});
+            }
+            if (route === 0 && segment === 51) {
+                this.playRadio("dev_secondary_beacons", {});
+            }
+            if (route === 1 && segment === 56) {
+                this.playRadio("dev_primary_beacons", {});
+            }
+        });
+    }
+}
+
+export async function load(player: mplayer.Player, debugRender: mrenderer.Settings, index: number): Promise<Level> {
+    const levelClass = [
+        Level0,
+        Level1,
+        Level2,
+    ][index];
+    const response = await fetch(`assets/level_${index}.map.json`);
     const map = await response.json() as core.GameMap;
-    return new Level_1(map, player, debugRender);
+    return new levelClass(map, player, debugRender);
 }

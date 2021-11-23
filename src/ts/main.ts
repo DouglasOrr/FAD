@@ -9,9 +9,9 @@ import { Keyboard } from "./keyboard.js";
 import * as utility from "./utility.js";
 import * as levels from "./levels.js";
 
-function createTicker(): utility.Event<void> {
+function createTicker(multiplier: number): utility.Event<void> {
     const ticker = new utility.Event<void>();
-    window.setInterval(() => ticker.send(), 1000 * core.TickTime);
+    window.setInterval(() => ticker.send(), 1000 * core.TickTime / multiplier);
     return ticker;
 }
 
@@ -37,7 +37,16 @@ window.onload = () => {
             showPongTime: 1,
         };
     }
-    const ticker = createTicker();
+    let levelIndex = 0;
+    if (params.has("level")) {
+        levelIndex = parseInt(params.get("level"));
+    }
+    let speed = 1;
+    if (params.has("speed")) {
+        speed = parseFloat(params.get("speed"));
+    }
+
+    const ticker = createTicker(speed);
     const player = new Player(new window.AudioContext());
     createClicker().listen(() => { player.resume() });
     const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
@@ -63,9 +72,12 @@ window.onload = () => {
     keyboard.listen("ping", () => { level?.ping(); });
     keyboard.listen("beacon", () => { level?.beacon(); });
     keyboard.listen("replay", () => { level?.replay(); });
-    player.whenEnabled(() => {
-        levels.loadFirstLevel(player, debugRender).then(lvl => {
+    function loadNextLevel() {
+        levels.load(player, debugRender, levelIndex).then(lvl => {
             level = lvl;
-        });
-    });
+            levelIndex += 1;
+            level.finished.listen(loadNextLevel);
+        })
+    }
+    player.whenEnabled(loadNextLevel);
 };

@@ -214,16 +214,18 @@ export class Ship {
         return this.relativeBreadcrumbBearing;
     }
 
-    toggleFAD(): void {
+    toggleFAD(): boolean {
         this.fadEnabled = !this.fadEnabled;
+        return this.fadEnabled;
     }
 
-    cycleRoute(): void {
+    cycleRoute(): number {
         this.currentRoute = (this.currentRoute + 1) % this.map.routes.length;
         if (this.map.routes.length) {
             this.routeChanged.send(this.currentRoute);
             this.currentSegment = null;
         }
+        return this.currentRoute;
     }
 
     ping(): void {

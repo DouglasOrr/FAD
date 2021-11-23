@@ -68,19 +68,29 @@ export class Playback {
     private _stopped = false;
     private _ended = false;
 
-    constructor(private element: HTMLAudioElement, readonly endDelay: number) {
+    constructor(private element: HTMLAudioElement, readonly settings: { startDelay?: number, endDelay?: number }) {
+        console.log(element.src, settings);
+        if (settings.startDelay) {
+            window.setTimeout(() => {
+                if (!this._stopped) {
+                    element.play();
+                }
+            }, settings.startDelay);
+        } else {
+            element.play();
+        }
         element.addEventListener("ended", () => {
             if (!this._stopped) {
-                if (endDelay === 0) {
-                    this._ended = true;
-                    this.ended.send();
-                } else {
+                if (settings.endDelay) {
                     window.setTimeout(() => {
                         if (!this._stopped) {
                             this._ended = true;
                             this.ended.send();
                         }
-                    }, endDelay);
+                    }, settings.endDelay);
+                } else {
+                    this._ended = true;
+                    this.ended.send();
                 }
             }
         }, { once: true });
@@ -128,13 +138,12 @@ export class Player {
 
     // Sounds
 
-    play(path: string, endDelay: number): Playback {
+    play(path: string, settings: { startDelay?: number, endDelay?: number }): Playback {
         const element = document.createElement("audio");
         element.src = path;
         const source = new MediaElementAudioSourceNode(this.context, { mediaElement: element });
         source.connect(this.context.destination);
-        element.play();
-        return new Playback(element, endDelay);
+        return new Playback(element, settings);
     }
 
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
