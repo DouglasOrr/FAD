@@ -16,11 +16,18 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Ready to go:
+Basics:
+
+```bash
+./build --dev
+http://localhost:8000
+http://localhost:8000/?autoreload=true&debug=true&level=1&speed=100
+```
+
+Further development:
 
 ```bash
 ./build
-./build --dev
 npm run check
 ```
 
