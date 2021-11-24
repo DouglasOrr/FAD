@@ -64,9 +64,11 @@ export class Level {
         this.playing.stop();
     }
 
-    tick(thrust: number, rotate: number): void {
+    tick(count: number, thrust: number, rotate: number): void {
         this.ship.tick(thrust, rotate);
-        this.player.fad.set(this.ship.fadBearing);
+        if (count % core.TicksPerSupertick === 0) {
+            this.player.fad.set(this.ship.fadBearing);
+        }
         if (this.renderer !== null) {
             this.renderer.draw();
         }

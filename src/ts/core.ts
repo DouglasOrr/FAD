@@ -6,6 +6,7 @@ import * as utility from "./utility.js";
 
 // Physics
 export const TickTime = 0.01;  // s
+export const TicksPerSupertick = 10;
 export const ShipRadius = 2;  // px
 const RotationRate = 1;  // rad/s
 const Acceleration = 30;  // px/s/s

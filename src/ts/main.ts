@@ -9,9 +9,12 @@ import { Keyboard } from "./keyboard.js";
 import * as utility from "./utility.js";
 import * as levels from "./levels.js";
 
-function createTicker(multiplier: number): utility.Event<void> {
-    const ticker = new utility.Event<void>();
-    window.setInterval(() => ticker.send(), 1000 * core.TickTime / multiplier);
+function createTicker(multiplier: number): utility.Event<number> {
+    const ticker = new utility.Event<number>();
+    let counter = 0;
+    window.setInterval(() => {
+        ticker.send(counter++);
+    }, 1000 * core.TickTime / multiplier);
     return ticker;
 }
 
@@ -61,8 +64,9 @@ window.onload = () => {
         beacon: ["k"],
     })));
     let level: levels.Level = null;
-    ticker.listen(() => {
+    ticker.listen(count => {
         level?.tick(
+            count,
             +keyboard.has("up") - +keyboard.has("down"),
             +keyboard.has("right") - +keyboard.has("left"),
         );

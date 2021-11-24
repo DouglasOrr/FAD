@@ -31,9 +31,10 @@ class FAD {
     }
 
     set(direction: number | null) {
+        const rampEndTime = this.context.currentTime + core.TickTime * core.TicksPerSupertick;
         if (direction === null) {
-            this.positive.gain.value = 0;
-            this.negative.gain.value = 0;
+            this.positive.gain.linearRampToValueAtTime(0, rampEndTime);
+            this.negative.gain.linearRampToValueAtTime(0, rampEndTime);
             return;
         }
         direction /= Math.PI;
@@ -42,16 +43,18 @@ class FAD {
         //    \    /  \
         //     ---+
         //   -1   0   1
-        this.positive.gain.value = FADBaseGain * Math.pow(
+        const positiveGain = FADBaseGain * Math.pow(
             (direction < 0) ? Math.max(-1 - 3 / 2 * direction, 0) :
                 Math.min(3 / 2 * direction, 2 - 3 / 2 * direction),
             FADExponent
         );
-        this.negative.gain.value = FADBaseGain * Math.pow(
+        this.positive.gain.linearRampToValueAtTime(positiveGain, rampEndTime);
+        const negativeGain = FADBaseGain * Math.pow(
             (0 < direction) ? Math.max(-1 + 3 / 2 * direction, 0) :
                 Math.min(-3 / 2 * direction, 2 + 3 / 2 * direction),
             FADExponent
         );
+        this.negative.gain.linearRampToValueAtTime(negativeGain, rampEndTime);
     }
 
     private start(startTime: number, frequency: number): GainNode {
@@ -168,8 +171,7 @@ export class Player {
         const startTime = this.context.currentTime + 0.1;
         const duration = 0.1;
         const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 500 });
-        const decay = new GainNode(this.context);
-        decay.gain.value = 0;
+        const decay = new GainNode(this.context, { gain: 0 });
         decay.gain.linearRampToValueAtTime(1.0, startTime + duration / 2);
         decay.gain.linearRampToValueAtTime(0, startTime + duration);
         oscillator.connect(decay)
