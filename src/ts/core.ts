@@ -11,12 +11,12 @@ const RotationRate = 1;  // rad/s
 const Acceleration = 30;  // px/s/s
 const ReboundAcceleration = 5;  // px/s/s
 const ReboundRestitution = 0.7;
-const Drag = 1;  // 1/px
+const Drag = 5;  // 1/s
 
 // Pings
 const PingCount = 32;
-const SpeedOfSound = 80;  // px/s
-const Attenuation = 1;  // dB/px
+const SpeedOfSound = 60;  // px/s
+const Attenuation = 2;  // dB/px
 
 export interface Grid {
     width: number;
@@ -252,8 +252,8 @@ export class Ship {
         // Update position
         const speed = utility.vectorLength(this.velocity);
         const acceleration = [
-            thrust * -Math.sin(this.bearing) * Acceleration - this.velocity[0] * speed * Drag,
-            thrust * Math.cos(this.bearing) * Acceleration - this.velocity[1] * speed * Drag,
+            thrust * -Math.sin(this.bearing) * Acceleration - this.velocity[0] * Drag,
+            thrust * Math.cos(this.bearing) * Acceleration - this.velocity[1] * Drag,
         ];
         this.position[0] += this.velocity[0] * TickTime / 2;
         this.position[1] += this.velocity[1] * TickTime / 2;

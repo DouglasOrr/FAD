@@ -15,7 +15,7 @@ export function triangleWave(x: number): number {
     return 1 - 4 * Math.abs(delta - 0.5);
 }
 
-const FADBaseGain = 0.05;
+const FADBaseGain = 0.04;
 const FADBaseFrequency = 150;
 const FADExponent = 1.5;
 
@@ -148,8 +148,9 @@ export class Player {
     }
 
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
-        const delayLeft = delay + Math.max(0.05 * pan, 0);
-        const delayRight = delay + Math.max(0.05 * -pan, 0);
+        const Spread = 0.1;
+        const delayLeft = delay + Math.max(Spread * pan, 0);
+        const delayRight = delay + Math.max(Spread * -pan, 0);
         const gainLeft = gain * (1 - pan) / 2;
         const gainRight = gain * (1 + pan) / 2;
 
@@ -164,7 +165,7 @@ export class Player {
     }
 
     ping(pongs: core.Pong[]): void {
-        const startTime = this.context.currentTime + 0.01;
+        const startTime = this.context.currentTime + 0.1;
         const duration = 0.1;
         const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 500 });
         const decay = new GainNode(this.context);
@@ -175,8 +176,12 @@ export class Player {
             .connect(new GainNode(this.context, { gain: 0.1 }))
             .connect(this.context.destination);
 
+        let totalGain = 0;
         for (const pong of pongs) {
-            const gain = 0.2 * dbToGain(-pong.attenuation);
+            totalGain += dbToGain(-pong.attenuation);
+        }
+        for (const pong of pongs) {
+            const gain = Math.min(0.2, 1 / totalGain) * dbToGain(-pong.attenuation);
             this.echo(decay, 0.05 + pong.delay, gain, triangleWave(pong.relativeBearing))
                 .connect(this.context.destination);
         }
