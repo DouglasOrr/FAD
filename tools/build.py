@@ -90,14 +90,14 @@ def custom_build(
         threading.Thread(target=_dowatch, daemon=True).start()
 
 
-def build(dev: bool) -> None:
+def build(dev: bool, port: int) -> None:
     out = Path("dist_dev" if dev else "dist")
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
     if dev:
         run(
-            ["python3", "-m", "http.server"],
+            ["python3", "-m", "http.server", str(port)],
             background=True,
             cwd=out,
             log=out / "server.log",
@@ -129,5 +129,11 @@ if __name__ == "__main__":
         "--dev",
         action="store_true",
         help="run in dev mode (continuous rebuilding & serving)",
+    )
+    parser.add_argument(
+        "--port",
+        default=8000,
+        type=int,
+        help="dev server port",
     )
     build(**vars(parser.parse_args()))

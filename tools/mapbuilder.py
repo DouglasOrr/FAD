@@ -1,3 +1,4 @@
+import argparse
 import collections
 import enum
 import json
@@ -154,3 +155,10 @@ class MapPng:
 
 def build(src: Path, dest: Path) -> None:
     dest.write_text(MapPng.load(src).to_json())
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("src", type=Path)
+    parser.add_argument("dest", type=Path)
+    build(**vars(parser.parse_args()))
