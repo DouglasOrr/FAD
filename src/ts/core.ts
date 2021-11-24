@@ -251,7 +251,6 @@ export class Ship {
         }
 
         // Update position
-        const speed = utility.vectorLength(this.velocity);
         const acceleration = [
             thrust * -Math.sin(this.bearing) * Acceleration - this.velocity[0] * Drag,
             thrust * Math.cos(this.bearing) * Acceleration - this.velocity[1] * Drag,
