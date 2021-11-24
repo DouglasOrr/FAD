@@ -25,8 +25,8 @@ class FAD {
 
     constructor(private readonly context: AudioContext) {
         const startTime = this.context.currentTime + 0.1;
-        this.positive = this.start(startTime, FADBaseFrequency);
-        this.negative = this.start(startTime, FADBaseFrequency * 4 / 3);
+        this.positive = this.start(startTime, FADBaseFrequency * 4 / 3);
+        this.negative = this.start(startTime, FADBaseFrequency);
         this.set(null);
     }
 
@@ -138,19 +138,29 @@ export class Player {
 
     // Sounds
 
-    play(path: string, settings: { startDelay?: number, endDelay?: number }): Playback {
+    play(path: string, settings: { startDelay?: number, endDelay?: number, volume?: number }): Playback {
         const element = document.createElement("audio");
         element.src = path;
         const source = new MediaElementAudioSourceNode(this.context, { mediaElement: element });
-        source.connect(this.context.destination);
+        source.connect(new GainNode(this.context, { gain: settings.volume || 1 }))
+            .connect(this.context.destination);
         return new Playback(element, settings);
     }
 
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
-        return source
-            .connect(new DelayNode(this.context, { delayTime: delay, maxDelayTime: delay }))
-            .connect(new GainNode(this.context, { gain: gain }))
-            .connect(new StereoPannerNode(this.context, { pan: pan }));
+        const delayLeft = delay + Math.max(0.05 * pan, 0);
+        const delayRight = delay + Math.max(0.05 * -pan, 0);
+        const gainLeft = gain * (1 - pan) / 2;
+        const gainRight = gain * (1 + pan) / 2;
+
+        const merge = new ChannelMergerNode(this.context, { numberOfInputs: 2 });
+        source.connect(new DelayNode(this.context, { delayTime: delayLeft, maxDelayTime: delayLeft }))
+            .connect(new GainNode(this.context, { gain: gainLeft }))
+            .connect(merge, 0, 0);
+        source.connect(new DelayNode(this.context, { delayTime: delayRight, maxDelayTime: delayRight }))
+            .connect(new GainNode(this.context, { gain: gainRight }))
+            .connect(merge, 0, 1);
+        return merge;
     }
 
     ping(pongs: core.Pong[]): void {
@@ -159,19 +169,15 @@ export class Player {
         const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 500 });
         const decay = new GainNode(this.context);
         decay.gain.value = 0;
-        decay.gain.linearRampToValueAtTime(0.5, startTime + duration / 2);
+        decay.gain.linearRampToValueAtTime(1.0, startTime + duration / 2);
         decay.gain.linearRampToValueAtTime(0, startTime + duration);
         oscillator.connect(decay)
             .connect(new GainNode(this.context, { gain: 0.1 }))
             .connect(this.context.destination);
 
-        let totalGain = 0;
         for (const pong of pongs) {
-            totalGain += dbToGain(-pong.attenuation);
-        }
-        for (const pong of pongs) {
-            const gain = dbToGain(-pong.attenuation) / totalGain;
-            this.echo(decay, pong.delay, gain, triangleWave(pong.relativeBearing))
+            const gain = 0.2 * dbToGain(-pong.attenuation);
+            this.echo(decay, 0.05 + pong.delay, gain, triangleWave(pong.relativeBearing))
                 .connect(this.context.destination);
         }
         oscillator.start(startTime);
@@ -184,7 +190,7 @@ export class Player {
         const oscillator = new OscillatorNode(this.context, { type: "triangle" });
         oscillator.frequency.setValueAtTime(200, startTime);
         oscillator.frequency.exponentialRampToValueAtTime(100, startTime + duration);
-        const decay = new GainNode(this.context, { gain: 0.1 });
+        const decay = new GainNode(this.context, { gain: 0.3 });
         decay.gain.linearRampToValueAtTime(0.01, startTime + duration);
         oscillator.connect(decay).connect(this.context.destination);
         oscillator.start();

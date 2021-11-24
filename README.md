@@ -34,3 +34,5 @@ npm run check
 ## Reference
 
  - Sox (`apt install sox libsox-fmt-mp3`) - plays MP3 from command line
+ - How to make a seamless loop in Audacity, John French, [blog](https://gamedevbeginner.com/create-looping-sound-effects-for-games-for-free-with-audacity/)
+ - Vintage Voice Effect in Audacity (Old Radio Effect), Mike Russel, [youtube](https://youtu.be/ko9hRYx1lF4)

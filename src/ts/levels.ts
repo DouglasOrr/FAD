@@ -50,7 +50,10 @@ export class Level {
         if (settings.saveReplay == null || settings.saveReplay) {
             this.lastRadioMessage = message;
         }
-        this.playing = this.player.play(`assets/${message}.mp3`, { startDelay: 1000 * settings.startDelay, endDelay: 1000 * settings.delay });
+        this.playing = this.player.play(
+            `assets/${message}.mp3`,
+            { startDelay: 1000 * settings.startDelay, endDelay: 1000 * settings.delay }
+        );
         if (settings.then) {
             this.playing.ended.listen(settings.then);
         }
@@ -70,11 +73,15 @@ export class Level {
     }
     toggleFAD(): void {
         const enabled = this.ship.toggleFAD();
-        this.player.play(`assets/${enabled ? "fad_active" : "fad_disabled"}.mp3`, {});
+        this.player.play(`assets/${enabled ? "fad_active" : "fad_disabled"}.mp3`, { volume: 0.1 });
     }
     cycleRoute(): void {
-        const route = this.ship.cycleRoute();
-        this.player.play(`assets/${["primary_beacons", "secondary_beacons"][route]}.mp3`, {});
+        if (this.map.routes.length >= 2) {
+            const route = this.ship.cycleRoute();
+            this.player.play(`assets/${["primary_beacons", "secondary_beacons"][route]}.mp3`, { volume: 0.1 });
+        } else {
+            // TODO - ship tone
+        }
     }
     ping(): void {
         this.ship.ping();
@@ -179,11 +186,15 @@ class Level2 extends Level {
     }
 }
 
+class Level3 extends Level {
+}
+
 export async function load(player: mplayer.Player, debugRender: mrenderer.Settings, index: number): Promise<Level> {
     const levelClass = [
         Level0,
         Level1,
         Level2,
+        Level3,
     ][index];
     const response = await fetch(`assets/level_${index}.map.json`);
     const map = await response.json() as core.GameMap;
