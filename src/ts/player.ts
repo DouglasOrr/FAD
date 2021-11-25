@@ -16,7 +16,7 @@ export function triangleWave(x: number): number {
 }
 
 const FADBaseGain = 0.04;
-const FADBaseFrequency = 150;
+const FADBaseFrequency = 250;
 const FADExponent = 1.5;
 
 class FAD {
@@ -71,7 +71,10 @@ export class Playback {
     private _stopped = false;
     private _ended = false;
 
-    constructor(private element: HTMLAudioElement, readonly settings: { startDelay?: number, endDelay?: number }) {
+    constructor(
+        private element: HTMLAudioElement,
+        readonly settings: { startDelay?: number, endDelay?: number },
+    ) {
         console.log(element.src, settings);
         if (settings.startDelay) {
             window.setTimeout(() => {
@@ -108,17 +111,47 @@ export class Playback {
     }
 }
 
+class Drone {
+    private readonly element: HTMLAudioElement;
+    private readonly gainNode: GainNode;
+
+    constructor(
+        private readonly context: AudioContext,
+        path: string,
+        private readonly maxGain: number,
+        private readonly rampTime: number,
+    ) {
+        this.element = document.createElement("audio");
+        this.element.src = path;
+        this.element.loop = true;
+        const source = new MediaElementAudioSourceNode(context, { mediaElement: this.element });
+        this.gainNode = new GainNode(this.context, { gain: 0 });
+        source.connect(this.gainNode).connect(this.context.destination);
+    }
+
+    play() {
+        this.element.play();
+    }
+
+    set(value: number) {
+        const currentGain = this.gainNode.gain.value;
+        const maxDelta = core.TickTime * core.TicksPerSupertick * this.maxGain / this.rampTime;
+        const delta = value * this.maxGain - currentGain;
+        const newGain = currentGain + Math.max(-maxDelta, Math.min(maxDelta, delta));
+        const rampEndTime = this.context.currentTime + core.TickTime * core.TicksPerSupertick;
+        this.gainNode.gain.linearRampToValueAtTime(newGain, rampEndTime);
+    }
+}
+
 export class Player {
-    // private ping0: AudioBuffer;
     readonly fad: FAD;
+    readonly engine: Drone;
+    readonly interference: Drone;
 
     constructor(private readonly context: AudioContext) {
         this.fad = new FAD(context);
-        (async () => {
-            const response = await fetch("assets/ping0.mp3");
-            const buffer = await response.arrayBuffer();
-            console.log(await context.decodeAudioData(buffer));
-        })();
+        this.engine = new Drone(context, "assets/fx_engine.mp3", 0.02, 0.5);
+        this.interference = new Drone(context, "assets/fx_interference.mp3", 0.02, 0.5);
     }
 
     // Control
@@ -136,6 +169,8 @@ export class Player {
     resume(): void {
         if (this.context.state !== "running") {
             this.context.resume();
+            this.engine.play();
+            this.interference.play();
         }
     }
 

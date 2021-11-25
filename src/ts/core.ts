@@ -135,10 +135,11 @@ export class Ship {
     readonly routeChanged = new utility.Event<number>();
     readonly segmentChanged = new utility.Event<[number, number]>();
 
-    private fadEnabled = true;
+    private _fadEnabled = true;
     private relativeBreadcrumbBearing: number = null;
     private currentRoute = 0;
     private currentSegment: number = null;
+    private currentHit: HitTest = null;
 
     constructor(
         public readonly position: utility.Vector,
@@ -215,9 +216,17 @@ export class Ship {
         return this.relativeBreadcrumbBearing;
     }
 
+    get cell(): Cell {
+        return this.currentHit.cell;
+    }
+
+    get fadEnabled(): boolean {
+        return this._fadEnabled;
+    }
+
     toggleFAD(): boolean {
-        this.fadEnabled = !this.fadEnabled;
-        return this.fadEnabled;
+        this._fadEnabled = !this._fadEnabled;
+        return this._fadEnabled;
     }
 
     cycleRoute(): number {
@@ -244,10 +253,10 @@ export class Ship {
         if (Math.PI < this.bearing) { this.bearing -= 2 * Math.PI; }
 
         // Handle collisions
-        const hit = HitTest.test(this.map, this.position);
-        if (hit.collision) {
-            this.bounce(hit.normal);
-            this.collisions.send(hit);
+        this.currentHit = HitTest.test(this.map, this.position);
+        if (this.currentHit.collision) {
+            this.bounce(this.currentHit.normal);
+            this.collisions.send(this.currentHit);
         }
 
         // Update position
@@ -264,7 +273,7 @@ export class Ship {
 
         // Update segments
         const segment = findSegment(this.map.routes[this.currentRoute], this.position);
-        if (!this.fadEnabled || hit.cell === Cell.Interference) {
+        if (!this._fadEnabled || this.currentHit.cell === Cell.Interference) {
             this.relativeBreadcrumbBearing = null;
         } else {
             this.relativeBreadcrumbBearing = utility.bearingDifference(

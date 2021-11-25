@@ -68,6 +68,9 @@ export class Level {
         this.ship.tick(thrust, rotate);
         if (count % core.TicksPerSupertick === 0) {
             this.player.fad.set(this.ship.fadBearing);
+            this.player.engine.set(Math.abs(thrust));
+            this.player.interference.set(+(
+                this.ship.fadEnabled && this.ship.cell === core.Cell.Interference));
         }
         if (this.renderer !== null) {
             this.renderer.draw();
