@@ -10,8 +10,8 @@ export const TicksPerSupertick = 10;
 export const ShipRadius = 2;  // px
 const RotationRate = 1.5;  // rad/s
 const Acceleration = 30;  // px/s/s
-const ReboundAcceleration = 5;  // px/s/s
-const ReboundRestitution = 0.7;
+const ReboundAcceleration = 100;  // px/s/s
+const ReboundRestitution = 1.0;
 const Drag = 5;  // 1/s
 
 // Pings

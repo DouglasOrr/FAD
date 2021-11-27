@@ -147,11 +147,17 @@ export class Player {
     readonly fad: FAD;
     readonly engine: Drone;
     readonly interference: Drone;
+    private _collisionBuffer: AudioBuffer;
 
     constructor(private readonly context: AudioContext) {
         this.fad = new FAD(context);
         this.engine = new Drone(context, "assets/fx_engine.mp3", 0.02, 0.5);
         this.interference = new Drone(context, "assets/fx_interference.mp3", 0.02, 0.5);
+        (async () => {
+            const response = await fetch("assets/fx_collision.mp3");
+            const buffer = await response.arrayBuffer();
+            this._collisionBuffer = await context.decodeAudioData(buffer);
+        })();
     }
 
     // Control
@@ -228,29 +234,8 @@ export class Player {
 
     collision(): void {
         const startTime = this.context.currentTime + 0.01;
-        const duration = 0.5;
-        const oscillator = new OscillatorNode(this.context, { type: "triangle" });
-        oscillator.frequency.setValueAtTime(200, startTime);
-        oscillator.frequency.exponentialRampToValueAtTime(100, startTime + duration);
-        const decay = new GainNode(this.context, { gain: 0.3 });
-        decay.gain.linearRampToValueAtTime(0.01, startTime + duration);
-        oscillator.connect(decay).connect(this.context.destination);
-        oscillator.start();
-        oscillator.stop(startTime + duration);
-    }
-
-    finished(): void {
-        const startTime = this.context.currentTime + 0.01;
-        const duration = 1.0;
-        const baseFrequency = 440;
-        for (const frequency of [baseFrequency, baseFrequency * 1.5, baseFrequency * 2]) {
-            const oscillator = new OscillatorNode(this.context, { type: "triangle", frequency: frequency });
-            const decay = new GainNode(this.context, { gain: 0 });
-            decay.gain.linearRampToValueAtTime(0.05, startTime + duration / 10);
-            decay.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-            oscillator.connect(decay).connect(this.context.destination);
-            oscillator.start();
-            oscillator.stop(this.context.currentTime + duration);
-        }
+        const buffer = new AudioBufferSourceNode(this.context, { buffer: this._collisionBuffer })
+        buffer.connect(new GainNode(this.context, { gain: 0.6 })).connect(this.context.destination);
+        buffer.start(startTime);
     }
 }
