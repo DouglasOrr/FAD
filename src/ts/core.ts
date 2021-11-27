@@ -8,7 +8,7 @@ import * as utility from "./utility.js";
 export const TickTime = 0.01;  // s
 export const TicksPerSupertick = 10;
 export const ShipRadius = 2;  // px
-const RotationRate = 1;  // rad/s
+const RotationRate = 1.5;  // rad/s
 const Acceleration = 30;  // px/s/s
 const ReboundAcceleration = 5;  // px/s/s
 const ReboundRestitution = 0.7;
@@ -16,7 +16,7 @@ const Drag = 5;  // 1/s
 
 // Pings
 const PingCount = 32;
-const SpeedOfSound = 60;  // px/s
+const SpeedOfSound = 50;  // px/s
 const Attenuation = 2;  // dB/px
 
 export interface Grid {

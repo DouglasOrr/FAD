@@ -205,7 +205,7 @@ export class Player {
     ping(pongs: core.Pong[]): void {
         const startTime = this.context.currentTime + 0.1;
         const duration = 0.1;
-        const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 500 });
+        const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 700 });
         const decay = new GainNode(this.context, { gain: 0 });
         decay.gain.linearRampToValueAtTime(1.0, startTime + duration / 2);
         decay.gain.linearRampToValueAtTime(0, startTime + duration);
@@ -218,8 +218,8 @@ export class Player {
             totalGain += dbToGain(-pong.attenuation);
         }
         for (const pong of pongs) {
-            const gain = Math.min(0.2, 1 / totalGain) * dbToGain(-pong.attenuation);
-            this.echo(decay, 0.05 + pong.delay, gain, triangleWave(pong.relativeBearing))
+            const gain = 1 * Math.min(1, 1 / totalGain) * dbToGain(-pong.attenuation);
+            this.echo(decay, pong.delay, gain, triangleWave(pong.relativeBearing))
                 .connect(this.context.destination);
         }
         oscillator.start(startTime);

@@ -78,12 +78,12 @@ export class Level {
     }
     toggleFAD(): void {
         const enabled = this.ship.toggleFAD();
-        this.player.play(`assets/${enabled ? "fad_active" : "fad_disabled"}.mp3`, { volume: 0.1 });
+        this.player.play(`assets/${enabled ? "console_fad_on" : "console_fad_off"}.mp3`, { volume: 0.25 });
     }
     cycleRoute(): void {
         if (this.map.routes.length >= 2) {
             const route = this.ship.cycleRoute();
-            this.player.play(`assets/${["primary_beacons", "secondary_beacons"][route]}.mp3`, { volume: 0.1 });
+            this.player.play(`assets/${["console_primary", "console_secondary"][route]}.mp3`, { volume: 0.25 });
         } else {
             // TODO - ship tone
         }
@@ -194,12 +194,20 @@ class Level2 extends Level {
 class Level3 extends Level {
 }
 
+class Level4 extends Level {
+}
+
+class Level5 extends Level {
+}
+
 export async function load(player: mplayer.Player, debugRender: mrenderer.Settings, index: number): Promise<Level> {
     const levelClass = [
         Level0,
         Level1,
         Level2,
         Level3,
+        Level4,
+        Level5,
     ][index];
     const response = await fetch(`assets/level_${index}.map.json`);
     const map = await response.json() as core.GameMap;
