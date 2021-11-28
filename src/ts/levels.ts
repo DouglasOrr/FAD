@@ -9,38 +9,10 @@ import * as utility from "./utility.js";
 
 export class Level {
     readonly finished: utility.Event<void> = new utility.Event();
-    protected readonly ship: core.Ship;
-    private readonly renderer: mrenderer.Renderer;
-    private playing: mplayer.Playback;
+    private playing: mplayer.Playback = null;
     private lastRadioMessage: string;
 
-    constructor(
-        protected readonly map: core.GameMap,
-        protected readonly player: mplayer.Player,
-        debugRender: mrenderer.Settings,
-    ) {
-        this.ship = core.Ship.create(map);
-        this.renderer = (debugRender === null ? null
-            : new mrenderer.Renderer(this.map, this.ship, debugRender));
-        this.ship.collisions.listen(() => {
-            player.collision();
-        });
-        this.ship.pongs.listen((e) => {
-            player.ping(e);
-            this.renderer?.addPongs(e);
-        });
-        this.ship.segmentChanged.listen(([route, segment]) => {
-            console.log(`Segment ${route}:${segment} of ${map.routes[route].length}`);
-            if (map.routes[route].length - 2 <= segment) {
-                this.finish();
-            }
-        });
-        this.init();
-    }
-
-    protected init(): void {
-        // empty
-    }
+    constructor(protected readonly player: mplayer.Player) { }
 
     protected playRadio(
         message: string,
@@ -64,6 +36,111 @@ export class Level {
         this.playing.stop();
     }
 
+    get radioAvailable(): boolean {
+        return this.playing === null || this.playing.is_ended || this.playing.is_stopped;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    tick(count: number, thrust: number, rotate: number): void {
+        // empty
+    }
+    toggleFAD(): void {
+        // empty
+    }
+    cycleRoute(): void {
+        // empty
+    }
+    ping(): void {
+        // empty
+    }
+    beacon(): void {
+        // empty
+    }
+    replay(): void {
+        if (this.radioAvailable) {
+            this.playRadio(this.lastRadioMessage, { saveReplay: false });
+        }
+    }
+}
+
+class Level0 extends Level {
+    private part: "title" | "soundtest" = "title";
+    private readyToAdvance = false;
+
+    constructor(player: mplayer.Player) {
+        super(player);
+        this.loopTitle();
+    }
+
+    private loopTitle(): void {
+        this.readyToAdvance = true;
+        this.playRadio("0.1_title", { delay: 2, then: () => this.loopTitle() });
+    }
+
+    private loopSoundTest(): void {
+        this.playRadio("0.2_soundtest1", {
+            then: () => {
+                this.player.fad.set(0.5);
+                window.setTimeout(() => { this.player.fad.set(null); }, 1000);
+                this.playRadio("0.3_soundtest2", {
+                    then: () => {
+                        this.player.collision();
+                        this.readyToAdvance = true;
+                        this.playRadio("0.4_ready", {
+                            delay: 2, then: () => {
+                                this.loopSoundTest();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    ping(): void {
+        if (this.readyToAdvance) {
+            if (this.part === "title") {
+                this.part = "soundtest";
+                this.readyToAdvance = false;
+                this.loopSoundTest();
+            } else {
+                this.finish();
+            }
+        }
+    }
+}
+
+class StandardLevel extends Level {
+    protected readonly ship: core.Ship;
+    private readonly renderer: mrenderer.Renderer;
+
+    constructor(
+        protected readonly player: mplayer.Player,
+        protected readonly map: core.GameMap,
+        debugRender: mrenderer.Settings,
+    ) {
+        super(player);
+        this.ship = core.Ship.create(map);
+        this.renderer = (debugRender === null ? null
+            : new mrenderer.Renderer(this.map, this.ship, debugRender));
+        this.ship.collisions.listen(() => {
+            player.collision();
+        });
+        this.ship.pongs.listen((e) => {
+            player.ping(e);
+            this.renderer?.addPongs(e);
+        });
+        this.ship.segmentChanged.listen(([route, segment]) => {
+            console.log(`Segment ${route}:${segment} of ${this.map.routes[route].length}`);
+            if (this.map.routes[route].length - 2 <= segment) {
+                this.finish();
+            }
+        });
+    }
+
+    init(): void {
+        // empty
+    }
     tick(count: number, thrust: number, rotate: number): void {
         this.ship.tick(thrust, rotate);
         if (count % core.TicksPerSupertick === 0) {
@@ -84,96 +161,68 @@ export class Level {
         if (this.map.routes.length >= 2) {
             const route = this.ship.cycleRoute();
             this.player.play(`assets/${["console_primary", "console_secondary"][route]}.mp3`, { volume: 0.25 });
-        } else {
-            // TODO - ship tone
         }
     }
     ping(): void {
         this.ship.ping();
     }
-    beacon(): void {
-        // empty
-    }
-    replay(): void {
-        if (this.playing?.is_ended || this.playing?.is_stopped) {
-            this.playRadio(this.lastRadioMessage, { saveReplay: false });
-        } else {
-            // TODO - ship tone
-        }
-    }
 }
 
-class Level0 extends Level {
-    protected override init(): void {
+class Level1 extends StandardLevel {
+    private state: "start" | "intro" | "FAD" | "play";
+
+    override init(): void {
+        super.init();
         this.ship.toggleFAD();
-        this.playRadio("0.1_intro", { then: () => this.loop() });
+        this.handleState("start");
     }
 
-    private loop(): void {
-        this.playRadio("0.1_ready", { delay: 2, then: () => this.loop() });
-    }
-
-    ping(): void {
-        this.finish();
-    }
-}
-
-enum Level1State {
-    Start,
-    Intro,
-    FAD,
-    Play,
-}
-
-class Level1 extends Level {
-    private state: Level1State;
-
-    protected override init(): void {
-        this.ship.toggleFAD();
-        this.handleState(Level1State.Start);
-    }
-
-    private handleState(newState?: Level1State): void {
+    private handleState(newState?: "start" | "intro" | "FAD" | "play"): void {
         if (newState !== undefined) {
             this.state = newState;
         }
-        if (this.state === Level1State.Start) {
+        if (this.state === "start") {
             this.playRadio("1.1_can_you_hear_me", { delay: 2, then: () => this.handleState() });
         }
-        if (this.state === Level1State.Intro) {
-            this.playRadio("1.2_intro", { then: () => this.handleState(Level1State.FAD) });
+        if (this.state === "intro") {
+            this.playRadio("1.2_intro", { then: () => this.handleState("FAD") });
         }
-        if (this.state === Level1State.FAD) {
+        if (this.state === "FAD") {
             this.playRadio("1.3_fad", { delay: 2, then: () => this.handleState() });
         }
-        if (this.state === Level1State.Play) {
+        if (this.state === "play") {
             this.playRadio("1.4_drive", { startDelay: 2 });
         }
     }
 
     beacon(): void {
-        if (this.state === Level1State.Start) {
-            this.handleState(Level1State.Intro);
+        if (this.state === "start") {
+            this.handleState("intro");
         }
-        if (this.state === Level1State.Play) {
+        if (this.state === "play" && this.radioAvailable) {
             this.playRadio("1.help", { saveReplay: false });
         }
-        super.beacon();
     }
 
     toggleFAD(): void {
-        if (this.state < Level1State.FAD) {
+        if (this.state === "start" || this.state === "intro") {
+            // Disable FAD
             return;
         }
-        if (this.state === Level1State.FAD) {
-            this.handleState(Level1State.Play);
+        if (this.state === "FAD") {
+            this.handleState("play");
         }
         super.toggleFAD();
     }
+
+    // Disable ping
+    ping(): void {
+        // empty
+    }
 }
 
-class Level2 extends Level {
-    protected override init(): void {
+class Level2 extends StandardLevel {
+    override init(): void {
         this.ship.segmentChanged.listen(([route, segment]) => {
             if (route === 0 && segment === 28) {
                 this.playRadio("dev_secondary_beacons", {});
@@ -189,27 +238,36 @@ class Level2 extends Level {
             }
         });
     }
+
+    // Disable ping
+    ping(): void {
+        // empty
+    }
 }
 
-class Level3 extends Level {
+class Level3 extends StandardLevel {
 }
 
-class Level4 extends Level {
+class Level4 extends StandardLevel {
 }
 
-class Level5 extends Level {
+class Level5 extends StandardLevel {
 }
 
 export async function load(player: mplayer.Player, debugRender: mrenderer.Settings, index: number): Promise<Level> {
+    if (index === 0) {
+        return new Level0(player);
+    }
     const levelClass = [
-        Level0,
         Level1,
         Level2,
         Level3,
         Level4,
         Level5,
-    ][index];
+    ][index - 1];
     const response = await fetch(`assets/level_${index}.map.json`);
     const map = await response.json() as core.GameMap;
-    return new levelClass(map, player, debugRender);
+    const level = new levelClass(player, map, debugRender);
+    level.init();
+    return level;
 }
