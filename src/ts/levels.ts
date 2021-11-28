@@ -11,13 +11,26 @@ export class Level {
     readonly finished: utility.Event<void> = new utility.Event();
     private playing: mplayer.Playback = null;
     private lastRadioMessage: string;
+    private played: Set<string> = new Set<string>();
 
     constructor(protected readonly player: mplayer.Player) { }
 
     protected playRadio(
         message: string,
-        settings: { startDelay?: number, delay?: number, then?: () => void, saveReplay?: boolean }
-    ): void {
+        settings: {
+            startDelay?: number,
+            delay?: number,
+            then?: () => void,
+            saveReplay?: boolean,
+            once?: boolean,
+        }
+    ): boolean {
+        if (settings.once) {
+            if (this.played.has(message)) {
+                return false;
+            }
+            this.played.add(message);
+        }
         this.playing?.stop();
         if (settings.saveReplay == null || settings.saveReplay) {
             this.lastRadioMessage = message;
@@ -29,6 +42,7 @@ export class Level {
         if (settings.then) {
             this.playing.ended.listen(settings.then);
         }
+        return true;
     }
 
     protected finish(): void {
@@ -113,6 +127,7 @@ class Level0 extends Level {
 class StandardLevel extends Level {
     protected readonly ship: core.Ship;
     private readonly renderer: mrenderer.Renderer;
+    protected frozen = true;
 
     constructor(
         protected readonly player: mplayer.Player,
@@ -138,10 +153,16 @@ class StandardLevel extends Level {
         });
     }
 
+    protected unfreeze(): void { this.frozen = false; }
+
     init(): void {
         // empty
     }
     tick(count: number, thrust: number, rotate: number): void {
+        if (this.frozen) {
+            // Disable movement
+            thrust = 0;
+        }
         this.ship.tick(thrust, rotate);
         if (count % core.TicksPerSupertick === 0) {
             this.player.fad.set(this.ship.fadBearing);
@@ -175,6 +196,15 @@ class Level1 extends StandardLevel {
         super.init();
         this.ship.toggleFAD();
         this.handleState("start");
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        this.ship.segmentChanged.listen(([_, segment]) => this.segmentChanged(segment));
+    }
+
+    private segmentChanged(segment: number): void {
+        if (this.state !== "play") return;
+        if (3 <= segment) this.playRadio("1.5_going", { once: true });
+        if (8 <= segment) this.playRadio("1.6_background", { once: true });
+        if (20 <= segment) this.playRadio("1.7_holding", { once: true });
     }
 
     private handleState(newState?: "start" | "intro" | "FAD" | "play"): void {
@@ -191,6 +221,7 @@ class Level1 extends StandardLevel {
             this.playRadio("1.3_fad", { delay: 2, then: () => this.handleState() });
         }
         if (this.state === "play") {
+            this.unfreeze();
             this.playRadio("1.4_drive", { startDelay: 2 });
         }
     }
@@ -203,7 +234,6 @@ class Level1 extends StandardLevel {
             this.playRadio("1.help", { saveReplay: false });
         }
     }
-
     toggleFAD(): void {
         if (this.state === "start" || this.state === "intro") {
             // Disable FAD
@@ -214,34 +244,58 @@ class Level1 extends StandardLevel {
         }
         super.toggleFAD();
     }
-
-    // Disable ping
     ping(): void {
-        // empty
+        // Disable ping
     }
 }
 
 class Level2 extends StandardLevel {
+    private doneSecondary = false;
+    private donePrimary = false;
+
     override init(): void {
-        this.ship.segmentChanged.listen(([route, segment]) => {
-            if (route === 0 && segment === 28) {
-                this.playRadio("dev_secondary_beacons", {});
-            }
-            if (route === 1 && segment === 34) {
-                this.playRadio("dev_primary_beacons", {});
-            }
-            if (route === 0 && segment === 51) {
-                this.playRadio("dev_secondary_beacons", {});
-            }
-            if (route === 1 && segment === 56) {
-                this.playRadio("dev_primary_beacons", {});
-            }
-        });
+        this.playRadio("2.1_intro", { then: () => this.unfreeze() });
+        this.ship.segmentChanged.listen(([route, segment]) => this.segmentChanged(route, segment));
     }
 
-    // Disable ping
+    private loopSecondary(): void {
+        if (!this.doneSecondary) {
+            this.playRadio("2.4_secondary", { delay: 2, then: () => this.loopSecondary() });
+        }
+    }
+    private loopPrimary(): void {
+        if (!this.donePrimary) {
+            this.playRadio("2.5_primary", { delay: 2, then: () => this.loopPrimary() });
+        }
+    }
+    private segmentChanged(route: number, segment: number): void {
+        function isIn(settings: { _0?: number, _1?: number }): boolean {
+            return route === 0 && segment === settings?._0 || route === 1 && segment === settings?._1;
+        }
+        if (isIn({ _0: 18, _1: 18 })) this.playRadio("2.2_lucky", { once: true });
+        if (isIn({ _0: 28 })) this.playRadio("2.3_blocked", {
+            once: true, then: () => this.loopSecondary()
+        });
+        if (isIn({ _1: 34 })) this.loopPrimary();
+        if (isIn({ _0: 42, _1: 41 })) this.playRadio("2.6_music", { once: true });
+        if (isIn({ _0: 51 })) this.playRadio("2.7_secondary_2", {});
+        if (isIn({ _1: 56 })) this.playRadio("2.8_primary_2", {});
+    }
+
+    cycleRoute(): void {
+        if (this.doneSecondary) {
+            this.donePrimary = true;
+        }
+        this.doneSecondary = true;
+        super.cycleRoute();
+    }
     ping(): void {
-        // empty
+        // Disable ping
+    }
+    beacon(): void {
+        if (this.radioAvailable) {
+            this.playRadio("2.help", { saveReplay: false });
+        }
     }
 }
 
