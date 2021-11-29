@@ -16,20 +16,11 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Basics:
+Running:
 
-```shell
-./build --dev
-http://localhost:8000
-http://localhost:8000/?autoreload=true&debug=true&level=1&speed=100
-```
-
-Further development:
-
-```shell
-./build
-npm run check
-```
+ - `./build --dev`, then visit http://localhost:8000 or http://localhost:8000/?autoreload=true&debug=true&level=1
+ - `./build`, for release
+ - `npm run check`, unit tests, types and lint
 
 ## Reference
 
