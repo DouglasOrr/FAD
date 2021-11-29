@@ -2,6 +2,8 @@
 
 Like any rapid prototype, FAD is built on the shoulders of giants...
 
+ - Concept, programming and additional voices by Douglas Orr
+ - "Marsha" and graphics by Miriam Orr
  - Sound effects from [ZapSplat](https://www.zapsplat.com), see [`assets/manifest.md`](https://github.com/DouglasOrr/FAD/blob/assets/manifest.md) for full details
    - Credits music - [ZapSplat / Solo Para Mi](https://www.zapsplat.com/music/solo-para-mi-dark-breakbeat-electronica-synth-arpeggios-throughout/) (Pioxonaq)
  - Audio editing with [Audacity](https://www.audacityteam.org/)
