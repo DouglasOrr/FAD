@@ -148,12 +148,16 @@ class StandardLevel extends Level {
         this.ship.segmentChanged.listen(([route, segment]) => {
             console.log(`Segment ${route}:${segment} of ${this.map.routes[route].length}`);
             if (this.map.routes[route].length - 2 <= segment) {
-                this.finish();
+                this.onFinalSegment();
             }
         });
     }
 
+    protected freeze(): void { this.frozen = true; }
     protected unfreeze(): void { this.frozen = false; }
+    protected onFinalSegment(): void {
+        this.finish();
+    }
 
     init(): void {
         // empty
@@ -300,12 +304,115 @@ class Level2 extends StandardLevel {
 }
 
 class Level3 extends StandardLevel {
+    private pinged = false;
+
+    override init(): void {
+        this.playRadio("3.1_intro", { then: () => this.loopPing() });
+        this.ship.segmentChanged.listen(([route, segment]) => this.segmentChanged(route, segment));
+    }
+
+    private loopPing(): void {
+        if (this.pinged) {
+            this.unfreeze();
+            this.playRadio("3.3_wall", { startDelay: 0.5 });
+        } else {
+            this.playRadio("3.2_ping", { delay: 2, then: () => this.loopPing() });
+        }
+    }
+    private segmentChanged(route: number, segment: number): void {
+        function isIn(settings: { _0?: number, _1?: number }): boolean {
+            return route === 0 && segment === settings?._0 || route === 1 && segment === settings?._1;
+        }
+        if (route === 0 && 4 <= segment) this.playRadio("3.4_obstacles", { once: true });
+        if (isIn({ _0: 6 })) this.playRadio("3.5_past", {});
+        if (isIn({ _0: 15, _1: 12 })) this.playRadio("3.6_obstacles_2", { once: true });
+        if (isIn({ _0: 17, _1: 14 })) this.playRadio("3.7_past_2", {});
+        if (isIn({ _0: 23, _1: 20 })) this.playRadio("3.8_proverb", { once: true });
+        if (isIn({ _0: 37, _1: 34 })) this.playRadio("3.9_obstacles_3", { once: true });
+        if (isIn({ _0: 45, _1: 44 })) this.playRadio("3.10_past_3", {});
+    }
+    beacon(): void {
+        if (this.radioAvailable) {
+            this.playRadio("3.help", { saveReplay: false });
+        }
+    }
+    ping(): void {
+        if (!this.pinged) {
+            this.pinged = true;
+            this.loopPing();
+        }
+        super.ping();
+    }
 }
 
 class Level4 extends StandardLevel {
+    override init(): void {
+        this.playRadio("4.1_intro", { then: () => this.unfreeze() });
+        this.ship.segmentChanged.listen(([route, segment]) => this.segmentChanged(route, segment));
+    }
+
+    private segmentChanged(route: number, segment: number): void {
+        function isIn(settings: { _0?: number, _1?: number }): boolean {
+            return route === 0 && segment === settings?._0 || route === 1 && segment === settings?._1;
+        }
+        if (isIn({ _0: 3, _1: 3 })) this.playRadio("4.2_precise", { once: true });
+        if (isIn({ _0: 13, _1: 13 })) this.playRadio("4.3_patchy", { once: true });
+        if (isIn({ _0: 20, _1: 20 })) this.playRadio("4.4_cargo", { once: true });
+        if (isIn({ _0: 30, _1: 30 })) this.playRadio("4.5_cavern", { once: true });
+        if (isIn({ _0: 36, _1: 36 })) this.playRadio("4.6_secondary", { once: true });
+        if (isIn({ _0: 43, _1: 43 })) this.playRadio("4.7_obstacles", { once: true });
+        if (isIn({ _0: 47, _1: 47 })) this.playRadio("4.8_interference_2", { once: true });
+        if (isIn({ _0: 55, _1: 55 })) this.playRadio("4.9_questions", { once: true });
+    }
+    beacon(): void {
+        if (this.radioAvailable) {
+            this.playRadio("3.help", { saveReplay: false });
+        }
+    }
 }
 
 class Level5 extends StandardLevel {
+    override init(): void {
+        this.playRadio("5.1_intro", { then: () => this.unfreeze() });
+        this.ship.segmentChanged.listen(([route, segment]) => this.segmentChanged(route, segment));
+    }
+
+    protected override onFinalSegment(): void {
+        // Handle finish() manually (see segmentChanged)
+    }
+    private segmentChanged(route: number, segment: number): void {
+        function isIn(settings: { _0?: number, _1?: number }): boolean {
+            return route === 0 && segment === settings?._0 || route === 1 && segment === settings?._1;
+        }
+        if (isIn({ _0: 13, _1: 13 })) this.playRadio("5.2_secondary", { once: true });
+        if (isIn({ _0: 24, _1: 26 })) this.playRadio("5.3_obstacle", { once: true });
+        if (isIn({ _0: 27, _1: 29 })) this.playRadio("5.4_passage", { once: true });
+        if (isIn({ _0: 49, _1: 51 })) this.playRadio("5.5_obstacles_2", { once: true });
+        if (isIn({ _0: 53, _1: 55 })) this.playRadio("5.6_past_2", { once: true });
+        if (isIn({ _0: 58, _1: 60 })) this.playRadio("5.7_obstacles_3", { once: true });
+        if (isIn({ _0: 61, _1: 63 })) this.playRadio("5.8_past_3", { once: true });
+        if (isIn({ _0: 68, _1: 70 })) this.playRadio("5.9_jammed", {
+            once: true,
+            delay: 0.3, then: () => this.playRadio("5.10_crosstalk", {})
+        });
+        if (isIn({ _0: 73 })) this.playRadio("5.11_please", {});
+        if (isIn({ _0: 76 })) this.playRadio("5.12a_please_2", {});
+        if (isIn({ _1: 79 })) this.playRadio("5.12b_thank_you", {});
+        if (isIn({ _0: 78 })) this.playRadio("5.13_save_or_destroy", {});
+        if (isIn({ _0: 84 })) {
+            this.freeze();
+            this.playRadio("5.14a_final", { then: () => this.finish() });
+        }
+        if (isIn({ _1: 87 })) {
+            this.freeze();
+            this.playRadio("5.14b_final", { then: () => this.finish() });
+        }
+    }
+    beacon(): void {
+        if (this.radioAvailable) {
+            this.playRadio("3.help", { saveReplay: false });
+        }
+    }
 }
 
 export async function load(player: mplayer.Player, debugRender: mrenderer.Settings, index: number): Promise<Level> {
