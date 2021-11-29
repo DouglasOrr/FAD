@@ -84,6 +84,7 @@ window.onload = () => {
         document.getElementById("note-start").hidden = true;
         document.getElementById("note-check-speakers").hidden = (levelIndex !== 0);
         document.getElementById("cover").hidden = (1 <= levelIndex && levelIndex <= 5);
+        document.getElementById("screen-debug").hidden = (levelIndex === 6);
 
         if (levelIndex <= 5) {
             levels.load(player, debugRender, levelIndex).then(lvl => {
@@ -92,7 +93,7 @@ window.onload = () => {
                 level.finished.listen(loadNextLevel);
             });
         } else {
-            player.play("assets/music_credits.mp3", { volume: 0.4 });
+            player.play("assets/music_credits.mp3", { volume: 0.3 });
             credits.roll(
                 document.getElementById("screen-credits-bg") as HTMLCanvasElement,
                 document.getElementById("screen-credits-fg") as HTMLCanvasElement,

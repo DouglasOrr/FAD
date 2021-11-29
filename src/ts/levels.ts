@@ -401,11 +401,13 @@ class Level5 extends StandardLevel {
         if (isIn({ _0: 78 })) this.playRadio("5.13_save_or_destroy", {});
         if (isIn({ _0: 84 })) {
             this.freeze();
-            this.playRadio("5.14a_final", { then: () => this.finish() });
+            if (this.ship.fadEnabled) this.ship.toggleFAD();
+            this.playRadio("5.14a_final", { delay: 0.5, then: () => this.finish() });
         }
         if (isIn({ _1: 87 })) {
             this.freeze();
-            this.playRadio("5.14b_final", { then: () => this.finish() });
+            if (this.ship.fadEnabled) this.ship.toggleFAD();
+            this.playRadio("5.14b_final", { delay: 0.5, then: () => this.finish() });
         }
     }
     beacon(): void {
