@@ -111,7 +111,7 @@ class Level0 extends Level {
         });
     }
 
-    ping(): void {
+    beacon(): void {
         if (this.readyToAdvance) {
             if (this.part === "title") {
                 this.part = "soundtest";

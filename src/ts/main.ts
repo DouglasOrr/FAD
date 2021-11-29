@@ -52,6 +52,9 @@ window.onload = () => {
     const ticker = createTicker(speed);
     const player = new Player(new window.AudioContext());
     createClicker().listen(() => { player.resume() });
+    window.addEventListener("keypress", (e: KeyboardEvent) => {
+        if (e.key === " ") { player.resume(); }
+    });
     const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
         up: ["w", "ArrowUp"],
         down: ["s", "ArrowDown"],
