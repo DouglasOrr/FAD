@@ -225,8 +225,7 @@ class Level1 extends StandardLevel {
             this.playRadio("1.3_fad", { delay: 2, then: () => this.handleState() });
         }
         if (this.state === "play") {
-            this.unfreeze();
-            this.playRadio("1.4_drive", { startDelay: 2 });
+            this.playRadio("1.4_drive", { startDelay: 2, then: () => this.unfreeze() });
         }
     }
 
@@ -313,8 +312,7 @@ class Level3 extends StandardLevel {
 
     private loopPing(): void {
         if (this.pinged) {
-            this.unfreeze();
-            this.playRadio("3.3_wall", { startDelay: 0.5 });
+            this.playRadio("3.3_wall", { startDelay: 0.5, then: () => this.unfreeze() });
         } else {
             this.playRadio("3.2_ping", { delay: 2, then: () => this.loopPing() });
         }
