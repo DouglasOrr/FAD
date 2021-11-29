@@ -27,7 +27,6 @@ function createClicker(): utility.Event<void> {
 window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.has("autoreload")) {
-        console.log("Autoreloading");
         const script = document.createElement("script");
         script.src = "https://livejs.com/live.js";
         document.head.appendChild(script);
@@ -35,7 +34,7 @@ window.onload = () => {
     let debugRender: mrenderer.Settings = null;
     if (params.has("debug")) {
         debugRender = {
-            canvas: document.getElementById("screen") as HTMLCanvasElement,
+            canvas: document.getElementById("debug-screen") as HTMLCanvasElement,
             scale: 5,
             showPongTime: 1,
         };
@@ -80,6 +79,10 @@ window.onload = () => {
     keyboard.listen("beacon", () => { level?.beacon(); });
     keyboard.listen("replay", () => { level?.replay(); });
     function loadNextLevel() {
+        document.getElementById("note-start").hidden = true;
+        document.getElementById("note-check-speakers").hidden = (levelIndex !== 0);
+        document.getElementById("cover").hidden = (1 <= levelIndex);
+
         levels.load(player, debugRender, levelIndex).then(lvl => {
             level = lvl;
             levelIndex += 1;

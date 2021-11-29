@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Ping</title>
+    <title>FAD</title>
     <link rel="stylesheet" href="custom.css">
     <!-- For autoreload -->
     <script type="module" src="./core.js"></script>
@@ -17,7 +17,15 @@
 </head>
 
 <body>
-    <canvas id="screen" width="10" height="10"></canvas>
+    <img id="cover" src="assets/cover.png" />
+    <p id="note-start">
+        Click or press <code>SPACE</code> to start.
+    </p>
+    <p id="note-check-speakers" hidden>
+        You should hear instructions through your speakers or headphones,
+        <br />&hellip; please check that this site is not muted and audio is unblocked.
+    </p>
+    <canvas id="debug-screen" width="10" height="10"></canvas>
 </body>
 
 </html>

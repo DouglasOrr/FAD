@@ -69,6 +69,7 @@ def custom_build(
                     print(f"$ {rule.__name__} {src} {dest}", file=sys.stderr)
                     dest.parent.mkdir(exist_ok=True)
                     rule(src, dest)
+                return  # The first matching rule is applied
 
     def _dowatch() -> None:
         events = inotify.adapters.InotifyTree(str(src_root)).event_gen(
@@ -106,6 +107,7 @@ def build(dev: bool, port: int) -> None:
         ["npx", "tsc", "--outDir", str(out), "--watch" if dev else None],
         background=dev,
     )
+    shutil.copy("assets/favicon.ico", out / "favicon.ico")
     for src_root, rules, dest_root in [
         (
             Path("src"),
@@ -114,7 +116,11 @@ def build(dev: bool, port: int) -> None:
         ),
         (
             Path("assets"),
-            [(".mp3", ".mp3", Rules.copy), (".map.png", ".map.json", Rules.mapbuilder)],
+            [
+                (".map.png", ".map.json", Rules.mapbuilder),
+                (".mp3", ".mp3", Rules.copy),
+                (".png", ".png", Rules.copy),
+            ],
             out / "assets",
         ),
     ]:

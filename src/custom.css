@@ -1,12 +1,16 @@
 html, body {
-    height: 100%;
-    width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 4em;
     background-color: black;
+    color: white;
 }
-#screen {
+#debug-screen {
     position: absolute;
     left: 32px;
     top: 32px;
+}
+p {
+    font-size: xx-large;
+    font-variant: small-caps;
+    font-family: 'Agency FB Bold Condensed', Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
 }
