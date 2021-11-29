@@ -1,6 +1,6 @@
-# Ping
+# FAD
 
-An audio-only video game.
+An audio-only video game, developed for [GitHub Game Off 2021](https://itch.io/jam/game-off-2021).
 
 ## Development
 
@@ -8,9 +8,9 @@ Setup requires:
 
  - Node.js (e.g. using `nvm`)
  - Python 3
- - `git clone --recurse-submodules git@github.com:DouglasOrr/Ping.git`
+ - `git clone --recurse-submodules git@github.com:DouglasOrr/FAD.git`
 
-```bash
+```shell
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 Basics:
 
-```bash
+```shell
 ./build --dev
 http://localhost:8000
 http://localhost:8000/?autoreload=true&debug=true&level=1&speed=100
@@ -26,7 +26,7 @@ http://localhost:8000/?autoreload=true&debug=true&level=1&speed=100
 
 Further development:
 
-```bash
+```shell
 ./build
 npm run check
 ```
@@ -37,5 +37,3 @@ npm run check
  - Audacity audio editor, [website](https://www.audacityteam.org/)
  - MDN Web docs, Web Audio API, [website](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
  - Sox (`apt install sox libsox-fmt-mp3`) - plays MP3 from command line
- - How to make a seamless loop in Audacity, John French, [blog](https://gamedevbeginner.com/create-looping-sound-effects-for-games-for-free-with-audacity/)
- - Vintage Voice Effect in Audacity (Old Radio Effect), Mike Russel, [youtube](https://youtu.be/ko9hRYx1lF4)

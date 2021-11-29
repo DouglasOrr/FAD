@@ -1,4 +1,4 @@
 [submodule "assets"]
 	path = assets
-	url = git@github.com:DouglasOrr/Ping.git
+	url = git@github.com:DouglasOrr/FAD.git
 	branch = assets

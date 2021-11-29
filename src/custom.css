@@ -1,16 +1,30 @@
 html, body {
     margin: 0;
-    padding: 4em;
     background-color: black;
     color: white;
 }
-#debug-screen {
+#screen-debug {
     position: absolute;
     left: 32px;
     top: 32px;
+}
+.screen-credits {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}
+#main-content {
+    position: absolute;
+    left: 5%;
+    top: 5%;
 }
 p {
     font-size: xx-large;
     font-variant: small-caps;
     font-family: 'Agency FB Bold Condensed', Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+}
+a {
+    color: white;
+    font-size: large;
+    font-variant: normal;
 }

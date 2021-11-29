@@ -8,6 +8,7 @@ import { Player } from "./player.js";
 import { Keyboard } from "./keyboard.js";
 import * as utility from "./utility.js";
 import * as levels from "./levels.js";
+import * as credits from "./credits.js";
 
 function createTicker(multiplier: number): utility.Event<number> {
     const ticker = new utility.Event<number>();
@@ -34,7 +35,7 @@ window.onload = () => {
     let debugRender: mrenderer.Settings = null;
     if (params.has("debug")) {
         debugRender = {
-            canvas: document.getElementById("debug-screen") as HTMLCanvasElement,
+            canvas: document.getElementById("screen-debug") as HTMLCanvasElement,
             scale: 5,
             showPongTime: 1,
         };
@@ -79,15 +80,25 @@ window.onload = () => {
     keyboard.listen("beacon", () => { level?.beacon(); });
     keyboard.listen("replay", () => { level?.replay(); });
     function loadNextLevel() {
+        document.getElementById("note-attribution").hidden = (levelIndex <= 5);
         document.getElementById("note-start").hidden = true;
         document.getElementById("note-check-speakers").hidden = (levelIndex !== 0);
-        document.getElementById("cover").hidden = (1 <= levelIndex);
+        document.getElementById("cover").hidden = (1 <= levelIndex && levelIndex <= 5);
 
-        levels.load(player, debugRender, levelIndex).then(lvl => {
-            level = lvl;
-            levelIndex += 1;
-            level.finished.listen(loadNextLevel);
-        })
+        if (levelIndex <= 5) {
+            levels.load(player, debugRender, levelIndex).then(lvl => {
+                level = lvl;
+                levelIndex += 1;
+                level.finished.listen(loadNextLevel);
+            });
+        } else {
+            player.play("assets/music_credits.mp3", { volume: 0.4 });
+            credits.roll(
+                document.getElementById("screen-credits-bg") as HTMLCanvasElement,
+                document.getElementById("screen-credits-fg") as HTMLCanvasElement,
+                document.getElementById("cover").getBoundingClientRect().right,
+            );
+        }
     }
     player.whenEnabled(loadNextLevel);
 };
