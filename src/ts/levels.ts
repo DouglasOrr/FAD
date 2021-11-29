@@ -393,7 +393,8 @@ class Level5 extends StandardLevel {
         if (isIn({ _0: 61, _1: 63 })) this.playRadio("5.8_past_3", { once: true });
         if (isIn({ _0: 68, _1: 70 })) this.playRadio("5.9_jammed", {
             once: true,
-            delay: 0.3, then: () => this.playRadio("5.10_crosstalk", {})
+            delay: 0.3,
+            then: () => this.playRadio("5.10_crosstalk", {}),
         });
         if (isIn({ _0: 73 })) this.playRadio("5.11_please", {});
         if (isIn({ _0: 76 })) this.playRadio("5.12a_please_2", {});
