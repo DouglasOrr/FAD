@@ -155,6 +155,9 @@ export class Player {
     engine: Drone;
     interference: Drone;
     private _collisionBuffer: AudioBuffer;
+    private readonly halfSine = new Float32Array(32).map((_, idx) => {
+        return Math.sin(idx * Math.PI / 31);
+    });
 
     constructor(private readonly context: AudioContext) {
         this.fad = new FAD(context);
@@ -197,10 +200,10 @@ export class Player {
     }
 
     private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
-        const Spread = 0.1;
-        const delayLeft = delay + Math.max(Spread * pan, 0);
-        const delayRight = delay + Math.max(Spread * -pan, 0);
+        const spread = 0.01;
         const a = Math.sin(pan * Math.PI / 2);
+        const delayLeft = delay + spread * Math.max(a, 0);
+        const delayRight = delay + spread * Math.max(-a, 0);
         const gainLeft = gain * (1 - a) / 2;
         const gainRight = gain * (1 + a) / 2;
 
@@ -216,11 +219,10 @@ export class Player {
 
     ping(pongs: core.Pong[]): void {
         const startTime = this.context.currentTime + 0.1;
-        const duration = 0.1;
+        const duration = 0.04;
         const oscillator = new OscillatorNode(this.context, { type: "sine", frequency: 700 });
         const decay = new GainNode(this.context, { gain: 0 });
-        decay.gain.linearRampToValueAtTime(1.0, startTime + duration / 2);
-        decay.gain.linearRampToValueAtTime(0, startTime + duration);
+        decay.gain.setValueCurveAtTime(this.halfSine, startTime, duration);
         oscillator.connect(decay)
             .connect(new GainNode(this.context, { gain: 0.1 }))
             .connect(this.context.destination);
