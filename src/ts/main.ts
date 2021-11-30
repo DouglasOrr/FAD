@@ -51,10 +51,6 @@ window.onload = () => {
 
     const ticker = createTicker(speed);
     const player = new Player(new window.AudioContext());
-    createClicker().listen(() => { player.resume() });
-    window.addEventListener("keypress", (e: KeyboardEvent) => {
-        if (e.key === " ") { player.resume(); }
-    });
     const keyboard = new Keyboard(new Map<string, string[]>(Object.entries({
         up: ["w", "ArrowUp"],
         down: ["s", "ArrowDown"],
@@ -101,5 +97,17 @@ window.onload = () => {
             );
         }
     }
-    player.whenEnabled(loadNextLevel);
+    // Only start after a click/key & player enabled
+    let started = false;
+    function start() {
+        if (!started) {
+            player.resume();
+            player.whenEnabled(loadNextLevel);
+            started = true;
+        }
+    }
+    createClicker().listen(start);
+    window.addEventListener("keypress", (e: KeyboardEvent) => {
+        if (e.key === " ") { start(); }
+    });
 };

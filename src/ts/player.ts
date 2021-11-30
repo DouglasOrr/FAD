@@ -21,13 +21,19 @@ const FADExponent = 1.5;
 
 class FAD {
     private readonly positive: GainNode;
+    private readonly positiveSource: OscillatorNode;
     private readonly negative: GainNode;
+    private readonly negativeSource: OscillatorNode;
 
     constructor(private readonly context: AudioContext) {
-        const startTime = this.context.currentTime + 0.1;
-        this.positive = this.start(startTime, FADBaseFrequency * 4 / 3);
-        this.negative = this.start(startTime, FADBaseFrequency);
+        [this.positiveSource, this.positive] = this.create(FADBaseFrequency * 4 / 3);
+        [this.negativeSource, this.negative] = this.create(FADBaseFrequency);
         this.set(null);
+    }
+
+    start() {
+        this.positiveSource.start();
+        this.negativeSource.start();
     }
 
     set(direction: number | null) {
@@ -57,12 +63,40 @@ class FAD {
         this.negative.gain.linearRampToValueAtTime(negativeGain, rampEndTime);
     }
 
-    private start(startTime: number, frequency: number): GainNode {
+    private create(frequency: number): [OscillatorNode, GainNode] {
         const source = new OscillatorNode(this.context, { frequency: frequency });
         const gain = new GainNode(this.context, { gain: 0 });
         source.connect(gain).connect(this.context.destination);
-        source.start(startTime);
-        return gain;
+        return [source, gain];
+    }
+}
+
+class Drone {
+    private readonly source: AudioBufferSourceNode;
+    private readonly gainNode: GainNode;
+
+    constructor(
+        private readonly context: AudioContext,
+        buffer: AudioBuffer,
+        private readonly maxGain: number,
+        private readonly rampTime: number,
+    ) {
+        this.source = new AudioBufferSourceNode(context, { buffer: buffer, loop: true });
+        this.gainNode = new GainNode(this.context, { gain: 0 });
+        this.source.connect(this.gainNode).connect(this.context.destination);
+    }
+
+    start() {
+        this.source.start();
+    }
+
+    set(value: number) {
+        const currentGain = this.gainNode.gain.value;
+        const maxDelta = core.TickTime * core.TicksPerSupertick * this.maxGain / this.rampTime;
+        const delta = value * this.maxGain - currentGain;
+        const newGain = currentGain + Math.max(-maxDelta, Math.min(maxDelta, delta));
+        const rampEndTime = this.context.currentTime + core.TickTime * core.TicksPerSupertick;
+        this.gainNode.gain.linearRampToValueAtTime(newGain, rampEndTime);
     }
 }
 
@@ -110,53 +144,24 @@ export class Playback {
     }
 }
 
-class Drone {
-    private readonly element: HTMLAudioElement;
-    private readonly gainNode: GainNode;
-
-    constructor(
-        private readonly context: AudioContext,
-        path: string,
-        private readonly maxGain: number,
-        private readonly rampTime: number,
-    ) {
-        this.element = document.createElement("audio");
-        this.element.src = path;
-        this.element.loop = true;
-        const source = new MediaElementAudioSourceNode(context, { mediaElement: this.element });
-        this.gainNode = new GainNode(this.context, { gain: 0 });
-        source.connect(this.gainNode).connect(this.context.destination);
-    }
-
-    play() {
-        this.element.play();
-    }
-
-    set(value: number) {
-        const currentGain = this.gainNode.gain.value;
-        const maxDelta = core.TickTime * core.TicksPerSupertick * this.maxGain / this.rampTime;
-        const delta = value * this.maxGain - currentGain;
-        const newGain = currentGain + Math.max(-maxDelta, Math.min(maxDelta, delta));
-        const rampEndTime = this.context.currentTime + core.TickTime * core.TicksPerSupertick;
-        this.gainNode.gain.linearRampToValueAtTime(newGain, rampEndTime);
-    }
+async function fetchAudio(context: AudioContext, path: string): Promise<AudioBuffer> {
+    const response = await fetch(path);
+    const buffer = await response.arrayBuffer();
+    return await context.decodeAudioData(buffer);
 }
 
 export class Player {
     readonly fad: FAD;
-    readonly engine: Drone;
-    readonly interference: Drone;
+    engine: Drone;
+    interference: Drone;
     private _collisionBuffer: AudioBuffer;
 
     constructor(private readonly context: AudioContext) {
         this.fad = new FAD(context);
-        this.engine = new Drone(context, "assets/fx_engine.mp3", 0.02, 0.5);
-        this.interference = new Drone(context, "assets/fx_interference.mp3", 0.02, 0.5);
-        (async () => {
-            const response = await fetch("assets/fx_collision.mp3");
-            const buffer = await response.arrayBuffer();
-            this._collisionBuffer = await context.decodeAudioData(buffer);
-        })();
+        // A bit ugly - assume these complete before anything exciting happens
+        fetchAudio(context, "assets/fx_engine.mp3").then(buffer => { this.engine = new Drone(context, buffer, 0.02, 0.5); });
+        fetchAudio(context, "assets/fx_interference.mp3").then(buffer => { this.interference = new Drone(context, buffer, 0.02, 0.5); });
+        fetchAudio(context, "assets/fx_collision.mp3").then(buffer => { this._collisionBuffer = buffer });
     }
 
     // Control
@@ -174,9 +179,12 @@ export class Player {
     resume(): void {
         if (this.context.state !== "running") {
             this.context.resume();
-            this.engine.play();
-            this.interference.play();
         }
+        this.whenEnabled(() => {
+            this.fad.start();
+            this.engine.start();
+            this.interference.start();
+        });
     }
 
     // Sounds
@@ -184,9 +192,7 @@ export class Player {
     play(path: string, settings: { startDelay?: number, endDelay?: number, volume?: number }): Playback {
         const element = document.createElement("audio");
         element.src = path;
-        const source = new MediaElementAudioSourceNode(this.context, { mediaElement: element });
-        source.connect(new GainNode(this.context, { gain: settings.volume || 1 }))
-            .connect(this.context.destination);
+        element.volume = settings.volume || 1;
         return new Playback(element, settings);
     }
 
