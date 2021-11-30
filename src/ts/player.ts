@@ -75,7 +75,6 @@ export class Playback {
         private element: HTMLAudioElement,
         readonly settings: { startDelay?: number, endDelay?: number },
     ) {
-        console.log(element.src, settings);
         if (settings.startDelay) {
             window.setTimeout(() => {
                 if (!this._stopped) {

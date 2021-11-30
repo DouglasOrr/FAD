@@ -3,6 +3,7 @@
 """App build & continuous rebuild."""
 
 import argparse
+import datetime
 import fnmatch
 import os
 import shutil
@@ -125,6 +126,16 @@ def build(dev: bool, port: int) -> None:
         ),
     ]:
         custom_build(src_root, rules, dest_root, watch=dev)
+    with (out / "COMMIT").open("wb") as f:
+        subprocess.check_call(["git", "rev-parse", "HEAD"], stdout=f)
+
+    # Create a submission zipfile
+    if not dev:
+        run(
+            ["zip", "-r", f"FAD_{datetime.datetime.now().isoformat()}.zip", "."],
+            cwd=out,
+        )
+
     if dev:
         threading.Event().wait()  # wait forever
 

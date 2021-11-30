@@ -146,7 +146,7 @@ class StandardLevel extends Level {
             this.renderer?.addPongs(e);
         });
         this.ship.segmentChanged.listen(([route, segment]) => {
-            console.log(`Segment ${route}:${segment} of ${this.map.routes[route].length}`);
+            // console.log(`Segment ${route}:${segment} of ${this.map.routes[route].length}`);
             if (this.map.routes[route].length - 2 <= segment) {
                 this.onFinalSegment();
             }
