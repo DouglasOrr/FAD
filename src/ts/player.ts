@@ -200,8 +200,9 @@ export class Player {
         const Spread = 0.1;
         const delayLeft = delay + Math.max(Spread * pan, 0);
         const delayRight = delay + Math.max(Spread * -pan, 0);
-        const gainLeft = gain * (1 - pan) / 2;
-        const gainRight = gain * (1 + pan) / 2;
+        const a = Math.sin(pan * Math.PI / 2);
+        const gainLeft = gain * (1 - a) / 2;
+        const gainRight = gain * (1 + a) / 2;
 
         const merge = new ChannelMergerNode(this.context, { numberOfInputs: 2 });
         source.connect(new DelayNode(this.context, { delayTime: delayLeft, maxDelayTime: delayLeft }))
