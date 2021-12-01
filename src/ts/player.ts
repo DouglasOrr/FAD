@@ -160,6 +160,7 @@ export class Player {
     });
 
     constructor(private readonly context: AudioContext) {
+        context.audioWorklet.addModule("worklets/audio_worklet_processors.js");
         this.fad = new FAD(context);
         // A bit ugly - assume these complete before anything exciting happens
         fetchAudio(context, "assets/fx_engine.mp3").then(buffer => { this.engine = new Drone(context, buffer, 0.02, 0.5); });
@@ -199,24 +200,6 @@ export class Player {
         return new Playback(element, settings);
     }
 
-    private echo(source: AudioNode, delay: number, gain: number, pan: number): AudioNode {
-        const spread = 0.01;
-        const a = Math.sin(pan * Math.PI / 2);
-        const delayLeft = delay + spread * Math.max(a, 0);
-        const delayRight = delay + spread * Math.max(-a, 0);
-        const gainLeft = gain * (1 - a) / 2;
-        const gainRight = gain * (1 + a) / 2;
-
-        const merge = new ChannelMergerNode(this.context, { numberOfInputs: 2 });
-        source.connect(new DelayNode(this.context, { delayTime: delayLeft, maxDelayTime: delayLeft }))
-            .connect(new GainNode(this.context, { gain: gainLeft }))
-            .connect(merge, 0, 0);
-        source.connect(new DelayNode(this.context, { delayTime: delayRight, maxDelayTime: delayRight }))
-            .connect(new GainNode(this.context, { gain: gainRight }))
-            .connect(merge, 0, 1);
-        return merge;
-    }
-
     ping(pongs: core.Pong[]): void {
         const startTime = this.context.currentTime + 0.1;
         const duration = 0.04;
@@ -227,15 +210,24 @@ export class Player {
             .connect(new GainNode(this.context, { gain: 0.1 }))
             .connect(this.context.destination);
 
-        let totalGain = 0;
-        for (const pong of pongs) {
-            totalGain += dbToGain(-pong.attenuation);
-        }
-        for (const pong of pongs) {
-            const gain = 1 * Math.min(1, 1 / totalGain) * dbToGain(-pong.attenuation);
-            this.echo(decay, pong.delay, gain, triangleWave(pong.relativeBearing))
-                .connect(this.context.destination);
-        }
+        const spread = 0.01;
+        const totalGain = pongs.reduce((g, pong) => g + dbToGain(-pong.attenuation), 0);
+        const echoes = pongs.map(pong => {
+            const gain = 1.0 * Math.min(1, 1 / totalGain) * dbToGain(-pong.attenuation);
+            const pan = Math.sin(triangleWave(pong.relativeBearing) * Math.PI / 2);
+            return {
+                gainLeft: gain * (1 - pan) / 2,
+                gainRight: gain * (1 + pan) / 2,
+                delayLeft: pong.delay + spread * Math.max(pan, 0),
+                delayRight: pong.delay + spread * Math.max(-pan, 0),
+            };
+        });
+
+        decay.connect(new AudioWorkletNode(this.context, "echo-processor", {
+            outputChannelCount: [2],
+            processorOptions: { echoes: echoes },
+        })).connect(this.context.destination);
+
         oscillator.start(startTime);
         oscillator.stop(startTime + duration);
     }
